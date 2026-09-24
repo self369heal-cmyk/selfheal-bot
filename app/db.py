@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS tracks (
     title       TEXT NOT NULL,
     section     TEXT NOT NULL,
     duration_min INTEGER,
-    description TEXT
+    description TEXT,
+    file_id     TEXT
 );
 
 CREATE TABLE IF NOT EXISTS user_tracks (
@@ -42,6 +43,10 @@ def _connect() -> aiosqlite.Connection:
 async def init_db() -> None:
     async with _connect() as db:
         await db.executescript(SCHEMA)
+        cursor = await db.execute("PRAGMA table_info(tracks)")
+        columns = {row[1] for row in await cursor.fetchall()}
+        if "file_id" not in columns:
+            await db.execute("ALTER TABLE tracks ADD COLUMN file_id TEXT")
         await db.commit()
 
 

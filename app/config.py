@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     webapp_host: str = "0.0.0.0"
     webapp_port: int = 8000
     database_path: str = "selfheal.db"
+    admin_telegram_id: int = 5925313775  # telegram_id администратора (команда /getfileid)
 
     @property
     def telegram_webhook_url(self) -> str:

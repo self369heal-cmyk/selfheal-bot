@@ -12,6 +12,7 @@ app/
   bot.py             # Фабрики Bot и Dispatcher (aiogram 3)
   db.py              # SQLite: схема и функции доступа (aiosqlite)
   handlers/start.py  # /start — приветствие и регистрация пользователя
+  handlers/getfileid.py  # /getfileid — админская команда, возвращает file_id присланного аудио/файла
   webhooks/telegram.py   # POST /webhooks/telegram — апдейты Telegram → aiogram
   webhooks/getcourse.py  # POST /webhooks/getcourse — заглушка, логирует payload
 ```
@@ -21,7 +22,7 @@ app/
 | Таблица | Поля |
 |---|---|
 | users | telegram_id, referrer_id, registered_at, got_free_track |
-| tracks | track_id, title, section, duration_min, description |
+| tracks | track_id, title, section, duration_min, description, file_id |
 | user_tracks | user_id, track_id, received_at |
 | referrals | referrer_id, referred_id, created_at |
 
@@ -40,6 +41,14 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 HTTPS-туннель (например, `ngrok http 8000`) и подставьте его адрес в
 `WEBHOOK_BASE_URL`.
 
+## Аудиотреки
+
+Треки не хранятся файлами на сервере — в `tracks.file_id` лежит Telegram file_id,
+и выдача трека идёт через `sendAudio`/`sendDocument` с этим file_id. Чтобы
+получить file_id, администратор (telegram_id в `ADMIN_TELEGRAM_ID`) отправляет
+боту команду `/getfileid`, затем присылает аудио или документ — бот отвечает его
+file_id.
+
 ## Эндпоинты
 
 | Метод | Путь | Назначение |
@@ -51,7 +60,7 @@ HTTPS-туннель (например, `ngrok http 8000`) и подставьт
 ## Переменные окружения
 
 См. `.env.example`: `BOT_TOKEN`, `WEBHOOK_BASE_URL`, `WEBAPP_HOST`,
-`WEBAPP_PORT`, `DATABASE_PATH`. Пути вебхуков можно переопределить через
+`WEBAPP_PORT`, `DATABASE_PATH`, `ADMIN_TELEGRAM_ID`. Пути вебхуков можно переопределить через
 `TELEGRAM_WEBHOOK_PATH` и `GETCOURSE_WEBHOOK_PATH`.
 
 ## Следующие шаги (по сценарию)
