@@ -58,16 +58,17 @@ file_id.
 | Метод | Путь | Назначение |
 |---|---|---|
 | POST | /webhooks/telegram | Приём апдейтов Telegram (передаются в aiogram Dispatcher) |
-| POST | /webhooks/getcourse | Заглушка для сигнала оплаты GetCourse — логирует тело запроса (JSON или form-data) |
+| POST | /webhooks/getcourse | Вебхук оплаты GetCourse: по telegram_id + названию трека + статусу записывает покупку в `user_tracks` и отправляет файл по `file_id` (sendAudio → запасной sendDocument) |
 | GET | /health | Проверка живости сервиса |
 
 ## Переменные окружения
 
 См. `.env.example`: `BOT_TOKEN`, `WEBHOOK_BASE_URL`, `WEBAPP_HOST`,
-`WEBAPP_PORT`, `DATABASE_PATH`, `ADMIN_TELEGRAM_ID`. Пути вебхуков можно переопределить через
+`WEBAPP_PORT`, `DATABASE_PATH`, `ADMIN_TELEGRAM_ID`, `GETCOURSE_PAY_URL_TEMPLATE`.
+Пути вебхуков можно переопределить через
 `TELEGRAM_WEBHOOK_PATH` и `GETCOURSE_WEBHOOK_PATH`.
 
 ## Следующие шаги (по сценарию)
 
-Полная обработка оплаты GetCourse (реальная ссылка и выдача .flac),
-реферальная программа «3 друга = бонус-трек», раздел «Мои покупки» и дисклеймер.
+Реферальная программа «3 друга = бонус-трек», раздел «Мои покупки», дисклеймер
+и боевой деплой.

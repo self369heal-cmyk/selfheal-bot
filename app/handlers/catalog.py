@@ -7,7 +7,10 @@ from aiogram.types import (
     InlineKeyboardMarkup,
 )
 
+from urllib.parse import quote
+
 from app import db
+from app.config import settings
 from app.keyboards import BACK_LABEL, CB_MENU
 
 logger = logging.getLogger(__name__)
@@ -15,8 +18,6 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 TRACK_PRICE = 900
-# временная заглушка-ссылка на оплату (заменится на GetCourse на следующем шаге)
-PAY_STUB_URL = "https://edu.selfheal369.ru/pay-stub"
 
 CATALOG_TITLE = "Выберите, с чем сейчас работаем:"
 
@@ -66,7 +67,17 @@ def track_card_text(track, free_available: bool, owned: bool) -> str:
     return text
 
 
-def track_kb(track, free_available: bool, owned: bool) -> InlineKeyboardMarkup:
+def pay_url(track, telegram_id: int) -> str:
+    return settings.getcourse_pay_url_template.format(
+        track_id=track["track_id"],
+        telegram_id=telegram_id,
+        track_title=quote(track["title"]),
+    )
+
+
+def track_kb(
+    track, free_available: bool, owned: bool, telegram_id: int
+) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     tid = track["track_id"]
     if not owned:
@@ -83,7 +94,7 @@ def track_kb(track, free_available: bool, owned: bool) -> InlineKeyboardMarkup:
                 [
                     InlineKeyboardButton(
                         text=f"💳 Купить за {TRACK_PRICE} ₽",
-                        url=f"{PAY_STUB_URL}?track={tid}",
+                        url=pay_url(track, telegram_id),
                     )
                 ]
             )
@@ -137,7 +148,9 @@ async def show_track(callback: CallbackQuery) -> None:
     owned = await db.user_has_track(callback.from_user.id, track_id)
     await callback.message.edit_text(
         track_card_text(track, free_available, owned),
-        reply_markup=track_kb(track, free_available, owned),
+        reply_markup=track_kb(
+            track, free_available, owned, callback.from_user.id
+        ),
     )
     await callback.answer()
 

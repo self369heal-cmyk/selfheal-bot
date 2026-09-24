@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     webapp_port: int = 8000
     database_path: str = "selfheal.db"
     admin_telegram_id: int = 5925313775  # telegram_id администратора (команда /getfileid)
+    # шаблон ссылки оплаты GetCourse: плейсхолдеры {track_id}, {telegram_id}, {track_title}
+    getcourse_pay_url_template: str = (
+        "https://edu.selfheal369.ru/pay-stub?track={track_id}&telegram_id={telegram_id}"
+    )
 
     @property
     def telegram_webhook_url(self) -> str:

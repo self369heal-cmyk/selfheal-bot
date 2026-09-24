@@ -125,6 +125,22 @@ async def get_track(track_id: int) -> aiosqlite.Row | None:
         return await cursor.fetchone()
 
 
+async def get_track_by_title(title: str) -> aiosqlite.Row | None:
+    async with _connect() as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM tracks WHERE title = ?", (title,)
+        )
+        row = await cursor.fetchone()
+        if row is not None:
+            return row
+        # запасной вариант: название трека может прийти с уточнением/обрезкой
+        cursor = await db.execute(
+            "SELECT * FROM tracks WHERE title LIKE ? LIMIT 1", (f"{title}%",)
+        )
+        return await cursor.fetchone()
+
+
 async def user_has_track(user_id: int, track_id: int) -> bool:
     async with _connect() as db:
         cursor = await db.execute(
