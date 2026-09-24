@@ -157,6 +157,21 @@ async def user_has_track(user_id: int, track_id: int) -> bool:
         return await cursor.fetchone() is not None
 
 
+async def get_user_tracks(user_id: int) -> list[aiosqlite.Row]:
+    async with _connect() as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """
+            SELECT t.*, ut.received_at FROM user_tracks ut
+            JOIN tracks t ON t.track_id = ut.track_id
+            WHERE ut.user_id = ?
+            ORDER BY ut.received_at
+            """,
+            (user_id,),
+        )
+        return await cursor.fetchall()
+
+
 async def add_user_track(user_id: int, track_id: int) -> None:
     async with _connect() as db:
         await db.execute(

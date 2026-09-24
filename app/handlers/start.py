@@ -5,6 +5,7 @@ from aiogram.filters import CommandObject, CommandStart
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from app import texts
 from app.db import add_referral, count_referrals, create_user, get_user
 from app.handlers.referral import BONUS_NOTIFY_TEXT, FRIENDS_PER_BONUS
 from app.keyboards import MENU_TITLE, main_menu_kb, open_catalog_kb
@@ -41,13 +42,16 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
         if candidate is not None and candidate != telegram_id:
             referrer_id = candidate
 
-    if await get_user(telegram_id) is None:
+    is_new = await get_user(telegram_id) is None
+    if is_new:
         await create_user(telegram_id, referrer_id)
         logger.info("New user registered: %s (referrer: %s)", telegram_id, referrer_id)
         if referrer_id is not None:
             await _register_referral(message, referrer_id)
 
     await message.answer(WELCOME_TEXT, reply_markup=open_catalog_kb())
+    if is_new:
+        await message.answer(texts.DISCLAIMER)
     await message.answer(MENU_TITLE, reply_markup=main_menu_kb())
 
 

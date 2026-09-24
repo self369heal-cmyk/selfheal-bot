@@ -49,9 +49,11 @@ def back_to_menu_kb() -> InlineKeyboardMarkup:
     )
 
 
-def contact_vlademir_kb(prefill_text: str) -> InlineKeyboardMarkup:
-    """Кнопка-ссылка на личку Владемира с предзаполненным текстом + назад."""
-    url = f"{VLADEMIR_URL}?text={quote(prefill_text)}"
+def contact_vlademir_kb(prefill_text: str | None = None) -> InlineKeyboardMarkup:
+    """Кнопка-ссылка на личку Владемира (опц. предзаполненный текст) + назад."""
+    url = VLADEMIR_URL
+    if prefill_text:
+        url = f"{url}?text={quote(prefill_text)}"
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Написать Владемиру ✍️", url=url)],
