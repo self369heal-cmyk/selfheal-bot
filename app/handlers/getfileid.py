@@ -35,10 +35,15 @@ async def send_file_id(message: Message) -> None:
     if not _is_admin(message):
         return
     attachment = message.audio or message.document
-    await message.answer(f"file_id:\n<code>{attachment.file_id}</code>")
+    name = (
+        getattr(attachment, "file_name", None)
+        or getattr(attachment, "title", None)
+        or "audio"
+    )
+    await message.answer(f"{name}\nfile_id:\n<code>{attachment.file_id}</code>")
     logger.info(
         "Admin %s requested file_id for %s: %s",
         message.from_user.id,
-        getattr(attachment, "file_name", None) or "audio",
+        name,
         attachment.file_id,
     )
