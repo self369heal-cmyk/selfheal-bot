@@ -2,16 +2,10 @@ import logging
 
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Message,
-)
+from aiogram.types import CallbackQuery, Message
 
 from app import texts
 from app.keyboards import (
-    BACK_LABEL,
     CB_MENU,
     MENU_TITLE,
     back_to_menu_kb,
@@ -24,28 +18,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 # кнопки меню, разделы которых появятся на следующих шагах сценария
-STUB_SECTIONS = {"referral", "purchases", "support", "video"}
-
-CATALOG_TITLE = "Выберите, с чем сейчас работаем:"
-
-# разделы каталога из раздела 1.3/2.3 документа (списки треков — следующий шаг)
-CATALOG_SECTIONS: list[tuple[str, str]] = [
-    ("sec_emotions", "😔 Эмоции и психика"),
-    ("sec_energy", "🌟 Состояние и энергия"),
-    ("sec_body", "💪 Исцеление тела"),
-]
-
-
-def _catalog_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            *[
-                [InlineKeyboardButton(text=label, callback_data=data)]
-                for data, label in CATALOG_SECTIONS
-            ],
-            [InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)],
-        ]
-    )
+STUB_SECTIONS = {"purchases", "support", "video"}
 
 SECTION_SCREENS: dict[str, tuple[str, object]] = {
     "howto": (texts.HOW_TO_LISTEN, None),
@@ -73,12 +46,6 @@ async def show_section(callback: CallbackQuery) -> None:
         contact_vlademir_kb(prefill) if prefill else back_to_menu_kb()
     )
     await callback.message.edit_text(text, reply_markup=kb)
-    await callback.answer()
-
-
-@router.callback_query(F.data == "catalog")
-async def show_catalog(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(CATALOG_TITLE, reply_markup=_catalog_kb())
     await callback.answer()
 
 
