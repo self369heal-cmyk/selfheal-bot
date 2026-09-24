@@ -3,7 +3,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from app.config import settings
-from app.handlers import getfileid, start
+from app.handlers import getfileid, menu, start
 
 
 def create_bot() -> Bot:
@@ -16,5 +16,6 @@ def create_bot() -> Bot:
 def create_dispatcher() -> Dispatcher:
     dp = Dispatcher()
     dp.include_router(start.router)
+    dp.include_router(menu.router)
     dp.include_router(getfileid.router)
     return dp

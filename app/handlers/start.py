@@ -5,6 +5,7 @@ from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import Message
 
 from app.db import create_user, get_user
+from app.keyboards import MENU_TITLE, main_menu_kb, open_catalog_kb
 
 logger = logging.getLogger(__name__)
 
@@ -42,4 +43,5 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
         await create_user(telegram_id, referrer_id)
         logger.info("New user registered: %s (referrer: %s)", telegram_id, referrer_id)
 
-    await message.answer(WELCOME_TEXT)
+    await message.answer(WELCOME_TEXT, reply_markup=open_catalog_kb())
+    await message.answer(MENU_TITLE, reply_markup=main_menu_kb())
