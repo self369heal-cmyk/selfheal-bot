@@ -16,7 +16,8 @@ app/
   handlers/start.py  # /start — приветствие и регистрация пользователя
   handlers/getfileid.py  # /getfileid — админская команда, возвращает file_id присланного аудио/файла
   handlers/menu.py   # Inline-меню: разделы «Как слушать КИТ», «Про автора», «Индивидуальный трек», «Индивидуальный сеанс», заглушки остальных
-  handlers/catalog.py # Каталог: разделы → список треков → карточка; бесплатный первый трек, заглушка-ссылка оплаты
+  handlers/catalog.py # Каталог: разделы → список треков → карточка; бесплатный первый трек, ссылка оплаты GetCourse
+  handlers/referral.py # Рефералка: экран со ссылкой и счётчиком, бонус-треки за каждые 3 друга
   webhooks/telegram.py   # POST /webhooks/telegram — апдейты Telegram → aiogram
   webhooks/getcourse.py  # POST /webhooks/getcourse — заглушка, логирует payload
 ```
@@ -25,7 +26,7 @@ app/
 
 | Таблица | Поля |
 |---|---|
-| users | telegram_id, referrer_id, registered_at, got_free_track |
+| users | telegram_id, referrer_id, registered_at, got_free_track, bonus_claimed |
 | tracks | track_id, title, section, duration_min, description, file_id |
 | user_tracks | user_id, track_id, received_at |
 | referrals | referrer_id, referred_id, created_at |
@@ -70,5 +71,4 @@ file_id.
 
 ## Следующие шаги (по сценарию)
 
-Реферальная программа «3 друга = бонус-трек», раздел «Мои покупки», дисклеймер
-и боевой деплой.
+Раздел «Мои покупки», дисклеймер и боевой деплой.

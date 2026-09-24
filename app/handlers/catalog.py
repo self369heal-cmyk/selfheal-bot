@@ -76,11 +76,23 @@ def pay_url(track, telegram_id: int) -> str:
 
 
 def track_kb(
-    track, free_available: bool, owned: bool, telegram_id: int
+    track,
+    free_available: bool,
+    owned: bool,
+    telegram_id: int,
+    bonus_available: bool = False,
 ) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     tid = track["track_id"]
     if not owned:
+        if bonus_available:
+            rows.append(
+                [
+                    InlineKeyboardButton(
+                        text="🎁 Забрать бонус-трек", callback_data=f"bonus:{tid}"
+                    )
+                ]
+            )
         if free_available:
             rows.append(
                 [
@@ -146,10 +158,14 @@ async def show_track(callback: CallbackQuery) -> None:
     user = await db.get_user(callback.from_user.id)
     free_available = bool(user) and not user["got_free_track"]
     owned = await db.user_has_track(callback.from_user.id, track_id)
+    bonus_available = False
+    if user and not free_available:
+        earned = await db.count_referrals(callback.from_user.id) // 3
+        bonus_available = earned > (user["bonus_claimed"] or 0)
     await callback.message.edit_text(
         track_card_text(track, free_available, owned),
         reply_markup=track_kb(
-            track, free_available, owned, callback.from_user.id
+            track, free_available, owned, callback.from_user.id, bonus_available
         ),
     )
     await callback.answer()
@@ -186,9 +202,3 @@ async def claim_free_track(callback: CallbackQuery) -> None:
         await callback.message.answer_audio(track["file_id"], title=track["title"])
     await callback.answer()
 
-
-@router.callback_query(F.data == "referral")
-async def referral_stub(callback: CallbackQuery) -> None:
-    await callback.answer(
-        "Реферальная программа появится на следующем шаге 🚧", show_alert=True
-    )

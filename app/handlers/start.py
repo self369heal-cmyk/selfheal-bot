@@ -2,9 +2,11 @@ import logging
 
 from aiogram import Router
 from aiogram.filters import CommandObject, CommandStart
-from aiogram.types import Message
+from aiogram.exceptions import TelegramAPIError
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from app.db import create_user, get_user
+from app.db import add_referral, count_referrals, create_user, get_user
+from app.handlers.referral import BONUS_NOTIFY_TEXT, FRIENDS_PER_BONUS
 from app.keyboards import MENU_TITLE, main_menu_kb, open_catalog_kb
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,33 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
     if await get_user(telegram_id) is None:
         await create_user(telegram_id, referrer_id)
         logger.info("New user registered: %s (referrer: %s)", telegram_id, referrer_id)
+        if referrer_id is not None:
+            await _register_referral(message, referrer_id)
 
     await message.answer(WELCOME_TEXT, reply_markup=open_catalog_kb())
     await message.answer(MENU_TITLE, reply_markup=main_menu_kb())
+
+
+async def _register_referral(message: Message, referrer_id: int) -> None:
+    await add_referral(referrer_id, message.from_user.id)
+    count = await count_referrals(referrer_id)
+    if count % FRIENDS_PER_BONUS != 0:
+        return
+    try:
+        await message.bot.send_message(
+            referrer_id,
+            BONUS_NOTIFY_TEXT.format(count=count),
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="Выбрать бонус-трек 🎁", callback_data="catalog"
+                        )
+                    ]
+                ]
+            ),
+        )
+    except TelegramAPIError:
+        logger.warning(
+            "Cannot notify referrer %s about %s referrals", referrer_id, count
+        )

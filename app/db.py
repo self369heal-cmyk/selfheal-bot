@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     telegram_id     INTEGER PRIMARY KEY,
     referrer_id     INTEGER,
     registered_at   TEXT NOT NULL,
-    got_free_track  INTEGER NOT NULL DEFAULT 0
+    got_free_track  INTEGER NOT NULL DEFAULT 0,
+    bonus_claimed   INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS tracks (
@@ -76,6 +77,12 @@ async def init_db() -> None:
         columns = {row[1] for row in await cursor.fetchall()}
         if "file_id" not in columns:
             await db.execute("ALTER TABLE tracks ADD COLUMN file_id TEXT")
+        cursor = await db.execute("PRAGMA table_info(users)")
+        user_columns = {row[1] for row in await cursor.fetchall()}
+        if "bonus_claimed" not in user_columns:
+            await db.execute(
+                "ALTER TABLE users ADD COLUMN bonus_claimed INTEGER NOT NULL DEFAULT 0"
+            )
         await db.executemany(
             """
             INSERT OR IGNORE INTO tracks (track_id, title, section, duration_min, description)
@@ -166,5 +173,35 @@ async def mark_got_free_track(telegram_id: int) -> None:
     async with _connect() as db:
         await db.execute(
             "UPDATE users SET got_free_track = 1 WHERE telegram_id = ?", (telegram_id,)
+        )
+        await db.commit()
+
+
+async def add_referral(referrer_id: int, referred_id: int) -> None:
+    async with _connect() as db:
+        await db.execute(
+            """
+            INSERT OR IGNORE INTO referrals (referrer_id, referred_id, created_at)
+            VALUES (?, ?, ?)
+            """,
+            (referrer_id, referred_id, datetime.now(timezone.utc).isoformat()),
+        )
+        await db.commit()
+
+
+async def count_referrals(referrer_id: int) -> int:
+    async with _connect() as db:
+        cursor = await db.execute(
+            "SELECT COUNT(*) FROM referrals WHERE referrer_id = ?", (referrer_id,)
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else 0
+
+
+async def increment_bonus_claimed(telegram_id: int) -> None:
+    async with _connect() as db:
+        await db.execute(
+            "UPDATE users SET bonus_claimed = bonus_claimed + 1 WHERE telegram_id = ?",
+            (telegram_id,),
         )
         await db.commit()
