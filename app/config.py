@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     bot_token: str = ""
     webhook_base_url: str = ""  # публичный HTTPS-адрес сервера, напр. https://bot.example.com
+    fly_app_name: str = ""  # выставляется Fly.io автоматически
     telegram_webhook_path: str = "/webhooks/telegram"
     getcourse_webhook_path: str = "/webhooks/getcourse"
     webapp_host: str = "0.0.0.0"
@@ -20,8 +21,16 @@ class Settings(BaseSettings):
     )
 
     @property
+    def public_base_url(self) -> str:
+        if self.webhook_base_url:
+            return self.webhook_base_url.rstrip("/")
+        if self.fly_app_name:
+            return f"https://{self.fly_app_name}.fly.dev"
+        return ""
+
+    @property
     def telegram_webhook_url(self) -> str:
-        return f"{self.webhook_base_url.rstrip('/')}{self.telegram_webhook_path}"
+        return f"{self.public_base_url}{self.telegram_webhook_path}"
 
 
 settings = Settings()

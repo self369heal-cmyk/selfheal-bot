@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     if settings.bot_token:
         bot = create_bot()
         app.state.bot = bot
-        if settings.webhook_base_url:
+        if settings.public_base_url:
             await bot.set_webhook(
                 settings.telegram_webhook_url, drop_pending_updates=True
             )
