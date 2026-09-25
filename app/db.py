@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 import aiosqlite
 
@@ -71,6 +72,7 @@ TRACKS_SEED: list[tuple[int, str, str, int | None, str]] = [
 
 
 async def init_db() -> None:
+    Path(settings.database_path).parent.mkdir(parents=True, exist_ok=True)
     async with _connect() as db:
         await db.executescript(SCHEMA)
         cursor = await db.execute("PRAGMA table_info(tracks)")

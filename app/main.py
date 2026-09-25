@@ -24,12 +24,15 @@ async def lifespan(app: FastAPI):
         bot = create_bot()
         app.state.bot = bot
         if settings.public_base_url:
-            await bot.set_webhook(
-                settings.telegram_webhook_url, drop_pending_updates=True
-            )
-            logger.info(
-                "Telegram webhook set to %s", settings.telegram_webhook_url
-            )
+            try:
+                await bot.set_webhook(
+                    settings.telegram_webhook_url, drop_pending_updates=True
+                )
+                logger.info(
+                    "Telegram webhook set to %s", settings.telegram_webhook_url
+                )
+            except Exception:
+                logger.exception("Failed to register Telegram webhook")
         else:
             logger.warning(
                 "WEBHOOK_BASE_URL is not set — "
