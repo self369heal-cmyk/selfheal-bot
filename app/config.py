@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     )
     # ключ для GET /admin/db-dump (выгрузка базы для бэкапов); пусто = отключено
     backup_key: str = ""
+    # прокси/замена Bot API endpoint (напр. https://tg-proxy.example.workers.dev),
+    # когда api.telegram.org недоступен с сервера; пусто = https://api.telegram.org
+    telegram_api_base: str = ""
 
     @property
     def public_base_url(self) -> str:

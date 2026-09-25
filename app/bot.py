@@ -1,5 +1,7 @@
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
 
 from app.config import settings
@@ -15,8 +17,16 @@ from app.handlers import (
 
 
 def create_bot() -> Bot:
+    session = None
+    if settings.telegram_api_base:
+        session = AiohttpSession(
+            api=TelegramAPIServer(
+                base=f"{settings.telegram_api_base.rstrip('/')}/bot{{token}}/{{method}}"
+            )
+        )
     return Bot(
         token=settings.bot_token,
+        session=session,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
