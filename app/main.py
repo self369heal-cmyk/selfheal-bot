@@ -62,7 +62,9 @@ async def lifespan(app: FastAPI):
         await bot.session.close()
 
 
-app = FastAPI(title="SelfHeal Bot", lifespan=lifespan)
+app = FastAPI()
+app.title = "SelfHeal Bot"
+app.router.lifespan_context = lifespan
 
 
 @app.get("/health")
