@@ -63,7 +63,12 @@ async def lifespan(app: FastAPI):
 
     bot = getattr(app.state, "bot", None)
     if bot is not None:
-        await bot.delete_webhook(drop_pending_updates=False)
+        try:
+            await asyncio.wait_for(
+                bot.delete_webhook(drop_pending_updates=False), timeout=10
+            )
+        except Exception:
+            logger.exception("Failed to delete Telegram webhook")
         await bot.session.close()
 
 
