@@ -11,6 +11,7 @@ from aiogram.types import (
 
 from app import texts
 from app.keyboards import (
+    BACK_LABEL,
     CB_MENU,
     MENU_TITLE,
     back_to_menu_kb,
