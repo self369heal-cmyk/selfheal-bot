@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -38,8 +39,12 @@ async def lifespan(app: FastAPI):
         app.state.bot = bot
         if settings.public_base_url:
             try:
-                await bot.set_webhook(
-                    settings.telegram_webhook_url, drop_pending_updates=True
+                await asyncio.wait_for(
+                    bot.set_webhook(
+                        settings.telegram_webhook_url,
+                        drop_pending_updates=True,
+                    ),
+                    timeout=15,
                 )
                 logger.info(
                     "Telegram webhook set to %s", settings.telegram_webhook_url
