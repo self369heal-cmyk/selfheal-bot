@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     getcourse_pay_url_template: str = (
         "https://edu.selfheal369.ru/pay-stub?track={track_id}&telegram_id={telegram_id}"
     )
+    # ключ для GET /admin/db-dump (выгрузка базы для бэкапов); пусто = отключено
+    backup_key: str = ""
 
     @property
     def public_base_url(self) -> str:

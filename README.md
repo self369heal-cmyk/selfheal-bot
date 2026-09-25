@@ -19,6 +19,8 @@ app/
   handlers/catalog.py # Каталог: разделы → список треков → карточка; бесплатный первый трек, ссылка оплаты GetCourse
   handlers/referral.py # Рефералка: экран со ссылкой и счётчиком, бонус-треки за каждые 3 друга
   handlers/purchases.py # «Мои покупки»: список треков + повторная отправка по file_id
+  handlers/backupdb.py # /backupdb — админская команда, присылает файл selfheal.db в чат
+  admin.py           # GET /admin/db-dump — выгрузка базы по заголовку X-Backup-Key (для автобэкапов)
   webhooks/telegram.py   # POST /webhooks/telegram — апдейты Telegram → aiogram
   webhooks/getcourse.py  # POST /webhooks/getcourse — заглушка, логирует payload
 ```
@@ -66,9 +68,10 @@ file_id.
 ## Переменные окружения
 
 См. `.env.example`: `BOT_TOKEN`, `WEBHOOK_BASE_URL`, `WEBAPP_HOST`,
-`WEBAPP_PORT`, `DATABASE_PATH`, `ADMIN_TELEGRAM_ID`, `GETCOURSE_PAY_URL_TEMPLATE`.
-Пути вебхуков можно переопределить через
-`TELEGRAM_WEBHOOK_PATH` и `GETCOURSE_WEBHOOK_PATH`.
+`WEBAPP_PORT`, `DATABASE_PATH`, `ADMIN_TELEGRAM_ID`, `GETCOURSE_PAY_URL_TEMPLATE`,
+`BACKUP_KEY`. Пути вебхуков можно переопределить через
+`TELEGRAM_WEBHOOK_PATH` и `GETCOURSE_WEBHOOK_PATH`. Если `WEBHOOK_BASE_URL` не задан,
+адрес определяется автоматически по `FLY_APP_NAME` (деплой на Fly.io).
 
 ## Деплой на сервер (VPS)
 
@@ -107,6 +110,13 @@ file_id.
    (POST, поля: telegram_id, название трека, статус).
 
 Проверка: `GET /health` → `{"status": "ok"}`.
+
+## Резервное копирование базы
+
+- Вручную: команда `/backupdb` в чате с ботом (только для `ADMIN_TELEGRAM_ID`) —
+  бот присылает актуальный `selfheal.db` документом.
+- Автоматически: `GET /admin/db-dump` с заголовком `X-Backup-Key: <BACKUP_KEY>`
+  отдаёт файл базы; если `BACKUP_KEY` не задан — эндпоинт отключён (403).
 
 ## Следующие шаги (по сценарию)
 

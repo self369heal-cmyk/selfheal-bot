@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 
+from app.admin import router as admin_router
 from app.bot import create_bot, create_dispatcher
 from app.config import settings
 from app.db import init_db
@@ -52,6 +53,7 @@ app.include_router(
 app.include_router(
     getcourse.router, prefix=settings.getcourse_webhook_path, tags=["getcourse"]
 )
+app.include_router(admin_router, prefix="/admin", tags=["admin"])
 
 
 @app.get("/health")

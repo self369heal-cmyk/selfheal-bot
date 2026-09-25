@@ -3,7 +3,15 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from app.config import settings
-from app.handlers import catalog, getfileid, menu, purchases, referral, start
+from app.handlers import (
+    backupdb,
+    catalog,
+    getfileid,
+    menu,
+    purchases,
+    referral,
+    start,
+)
 
 
 def create_bot() -> Bot:
@@ -21,4 +29,5 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(purchases.router)
     dp.include_router(menu.router)
     dp.include_router(getfileid.router)
+    dp.include_router(backupdb.router)
     return dp
