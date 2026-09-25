@@ -1,0 +1,51 @@
+// Cloudflare Worker — двусторонний релей между VPS и Telegram.
+// Используется, когда api.telegram.org недоступен/недостижим с сервера.
+//
+// 1) Исходящие вызовы Bot API:
+//    VPS → https://<worker>.workers.dev/bot<TOKEN>/<METHOD> → api.telegram.org
+//    (на боте выставляется TELEGRAM_API_BASE=https://<worker>.workers.dev)
+//    Также /file/bot<TOKEN>/<path> для скачивания файлов.
+//
+// 2) Входящий вебхук:
+//    Telegram → https://<worker>.workers.dev/hook/<name> → <origin>/webhooks/telegram
+//    (на боте выставляется WEBHOOK_BASE_URL=https://<worker>.workers.dev
+//     и TELEGRAM_WEBHOOK_PATH=/hook/<name>)
+
+const HOOKS = {
+  // name → куда пересылать апдейты Telegram
+  selfheal: "https://bot.selfheal369.ru/webhooks/telegram",
+};
+
+const TG_API = "https://api.telegram.org";
+
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    // Входящий вебхук от Telegram
+    if (path.startsWith("/hook/")) {
+      const name = path.slice("/hook/".length).replace(/\/.*$/, "");
+      const target = HOOKS[name];
+      if (!target) {
+        return new Response("unknown hook", { status: 404 });
+      }
+      return fetch(target + url.search, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+      });
+    }
+
+    // Исходящие вызовы Bot API и скачивание файлов
+    if (path.startsWith("/bot") || path.startsWith("/file/bot")) {
+      return fetch(TG_API + path + url.search, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+      });
+    }
+
+    return new Response("tg-proxy ok", { status: 200 });
+  },
+};
