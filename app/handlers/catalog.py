@@ -20,7 +20,7 @@ router = Router()
 
 TRACK_PRICE = 900
 
-CATALOG_TITLE = "Выберите, с чем сейчас работаем:"
+CATALOG_TITLE = "🎵 Выберите, с чем сейчас работаем:"
 
 # разделы каталога из разделов 1.3/2.3 документа
 SECTIONS: dict[str, str] = {
@@ -57,7 +57,7 @@ def track_card_text(track, free_available: bool, owned: bool) -> str:
     duration = f"{track['duration_min']} мин" if track["duration_min"] else "уточняется"
     price = "<b>бесплатно для вас</b>" if free_available else f"<b>{TRACK_PRICE} ₽</b>"
     text = (
-        f"<b>{track['title']}</b>\n"
+        f"🎧 <b>{track['title']}</b>\n"
         f"Раздел: {SECTIONS.get(track['section'], track['section'])}\n"
         f"Длительность: {duration}\n"
         f"Для чего: {track['description']}\n"
@@ -142,7 +142,7 @@ async def show_section(callback: CallbackQuery) -> None:
         await callback.answer("В этом разделе пока нет треков", show_alert=True)
         return
     await callback.message.edit_text(
-        f"{SECTIONS.get(section, 'Раздел')}: выберите трек",
+        f"{SECTIONS.get(section, 'Раздел')}: выберите трек 🎵",
         reply_markup=section_kb(tracks),
     )
 
