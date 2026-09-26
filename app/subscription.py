@@ -23,12 +23,14 @@ def subscribe_kb(track_id: int, kind: str) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text="📢 Подписаться на канал",
                     url=f"https://t.me/{channel}",
+                    style="success",
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="✅ Проверить подписку",
                     callback_data=f"checksub:{kind}:{track_id}",
+                    style="success",
                 )
             ],
             [InlineKeyboardButton(text=BACK_LABEL, callback_data="catalog")],

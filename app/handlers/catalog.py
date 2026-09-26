@@ -88,7 +88,9 @@ def track_kb(
             rows.append(
                 [
                     InlineKeyboardButton(
-                        text="🎁 Забрать бонус-трек", callback_data=f"bonus:{tid}"
+                        text="🎁 Забрать бонус-трек",
+                        callback_data=f"bonus:{tid}",
+                        style="success",
                     )
                 ]
             )
@@ -96,7 +98,9 @@ def track_kb(
             rows.append(
                 [
                     InlineKeyboardButton(
-                        text="🎁 Забрать бесплатно", callback_data=f"free:{tid}"
+                        text="🎁 Забрать бесплатно",
+                        callback_data=f"free:{tid}",
+                        style="success",
                     )
                 ]
             )
@@ -106,6 +110,7 @@ def track_kb(
                     InlineKeyboardButton(
                         text=f"💳 Купить за {TRACK_PRICE} ₽",
                         url=pay_url(track, telegram_id),
+                        style="success",
                     )
                 ]
             )
@@ -120,7 +125,9 @@ def track_kb(
     rows.append(
         [
             InlineKeyboardButton(
-                text="⬅️ Назад в раздел", callback_data=f"sec:{track['section']}"
+                text="⬅️ Назад в раздел",
+                callback_data=f"sec:{track['section']}",
+                style="danger",
             )
         ]
     )
