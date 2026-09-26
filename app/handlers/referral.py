@@ -103,7 +103,11 @@ async def claim_bonus_track(callback: CallbackQuery) -> None:
         await callback.answer("Трек не найден", show_alert=True)
         return
     if await db.user_has_track(callback.from_user.id, track_id):
-        await callback.answer("Этот трек уже у вас", show_alert=True)
+        # повтор после transient-ретрая: трек уже выдан — досылаем файл
+        if track["file_id"]:
+            await callback.message.answer_audio(
+                track["file_id"], title=track["title"]
+            )
         return
 
     await db.increment_bonus_claimed(callback.from_user.id)

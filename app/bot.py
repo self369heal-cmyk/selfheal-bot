@@ -1,3 +1,5 @@
+from typing import Any
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -17,17 +19,25 @@ from app.handlers import (
 )
 
 
+class _ReliableSession(AiohttpSession):
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(timeout=10, **kwargs)
+        # каждый вызов API — новое соединение: пул переиспользует дохлые
+        # keep-alive коннекты до Worker и виснет до таймаута
+        self._connector_init["force_close"] = True
+
+
 def create_bot() -> Bot:
-    session = None
     if settings.telegram_api_base:
         api_base = settings.telegram_api_base.rstrip("/")
-        session = AiohttpSession(
+        session = _ReliableSession(
             api=TelegramAPIServer(
                 base=f"{api_base}/bot{{token}}/{{method}}",
                 file=f"{api_base}/file/bot{{token}}/{{path}}",
-            ),
-            timeout=10,
+            )
         )
+    else:
+        session = _ReliableSession()
     return Bot(
         token=settings.bot_token,
         session=session,

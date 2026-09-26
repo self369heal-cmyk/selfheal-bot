@@ -178,15 +178,22 @@ async def claim_free_track(callback: CallbackQuery) -> None:
     if user is None:
         await callback.answer("Нажмите /start для регистрации", show_alert=True)
         return
+    track = await db.get_track(track_id)
+    if track is None:
+        await callback.answer("Трек не найден", show_alert=True)
+        return
     if user["got_free_track"]:
+        if await db.user_has_track(callback.from_user.id, track_id):
+            # повтор после transient-ретрая: трек уже выдан — досылаем файл
+            if track["file_id"]:
+                await callback.message.answer_audio(
+                    track["file_id"], title=track["title"]
+                )
+            return
         await callback.answer(
             "Бесплатный трек уже использован — этот можно купить 🙌",
             show_alert=True,
         )
-        return
-    track = await db.get_track(track_id)
-    if track is None:
-        await callback.answer("Трек не найден", show_alert=True)
         return
 
     await db.mark_got_free_track(callback.from_user.id)
