@@ -25,7 +25,8 @@ def create_bot() -> Bot:
             api=TelegramAPIServer(
                 base=f"{api_base}/bot{{token}}/{{method}}",
                 file=f"{api_base}/file/bot{{token}}/{{path}}",
-            )
+            ),
+            timeout=10,
         )
     return Bot(
         token=settings.bot_token,
