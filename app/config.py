@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     # прокси/замена Bot API endpoint (напр. https://tg-proxy.example.workers.dev),
     # когда api.telegram.org недоступен с сервера; пусто = https://api.telegram.org
     telegram_api_base: str = ""
+    # канал, подписка на который обязательна для бонусного трека (бот должен быть админом)
+    channel_username: str = "@samo_omolojenie"
 
     @property
     def public_base_url(self) -> str:
