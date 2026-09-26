@@ -54,8 +54,8 @@ def section_kb(tracks: list) -> InlineKeyboardMarkup:
 
 
 def track_card_text(track, free_available: bool, owned: bool) -> str:
-    duration = f"{track['duration_min']} мин" if track["duration_min"] else "—"
-    price = "Первый трек — бесплатно" if free_available else f"{TRACK_PRICE} ₽"
+    duration = f"{track['duration_min']} мин" if track["duration_min"] else "уточняется"
+    price = "<b>бесплатно для вас</b>" if free_available else f"<b>{TRACK_PRICE} ₽</b>"
     text = (
         f"<b>{track['title']}</b>\n"
         f"Раздел: {SECTIONS.get(track['section'], track['section'])}\n"
@@ -64,7 +64,7 @@ def track_card_text(track, free_available: bool, owned: bool) -> str:
         f"Цена: {price}"
     )
     if owned:
-        text += "\n\n🎧 Этот трек уже у вас — найдите его в разделе «💳 Мои покупки»."
+        text += "\n\n🎧 Этот трек уже у вас. Найдите его в разделе «💳 Мои покупки»."
     return text
 
 
@@ -142,7 +142,7 @@ async def show_section(callback: CallbackQuery) -> None:
         await callback.answer("В этом разделе пока нет треков", show_alert=True)
         return
     await callback.message.edit_text(
-        f"{SECTIONS.get(section, 'Раздел')} — выберите трек:",
+        f"{SECTIONS.get(section, 'Раздел')}: выберите трек",
         reply_markup=section_kb(tracks),
     )
 
@@ -181,7 +181,7 @@ async def _deliver_free_track(callback: CallbackQuery, user, track) -> None:
                 )
             return
         await callback.answer(
-            "Бесплатный трек уже использован — этот можно купить 🙌",
+            "Бесплатный трек уже использован, этот можно купить 🙌",
             show_alert=True,
         )
         return
@@ -191,9 +191,9 @@ async def _deliver_free_track(callback: CallbackQuery, user, track) -> None:
     logger.info("User %s claimed free track %s", callback.from_user.id, track_id)
 
     await callback.message.edit_text(
-        f"🎁 <b>{track['title']}</b> — ваш подарок!\n\n"
-        "Трек придёт следующим сообщением, как только аудиофайл будет загружен в базу. "
-        "Советы по прослушиванию — в разделе «📖 Как слушать КИТ».",
+        f"🎁 <b>{track['title']}</b>: ваш подарок!\n\n"
+        "Трек придёт следующим сообщением, как только аудиофайл будет загружен в базу.\n\n"
+        "Советы по прослушиванию в разделе «📖 Как слушать КИТ».",
     )
     if track["file_id"]:
         await callback.message.answer_audio(track["file_id"], title=track["title"])
