@@ -12,6 +12,7 @@ from urllib.parse import quote
 from app import db
 from app.config import settings
 from app.keyboards import BACK_LABEL, CB_MENU
+from app.subscription import require_subscription
 
 logger = logging.getLogger(__name__)
 
@@ -168,17 +169,9 @@ async def show_track(callback: CallbackQuery) -> None:
     )
 
 
-@router.callback_query(F.data.startswith("free:"))
-async def claim_free_track(callback: CallbackQuery) -> None:
-    track_id = int(callback.data.split(":", 1)[1])
-    user = await db.get_user(callback.from_user.id)
-    if user is None:
-        await callback.answer("Нажмите /start для регистрации", show_alert=True)
-        return
-    track = await db.get_track(track_id)
-    if track is None:
-        await callback.answer("Трек не найден", show_alert=True)
-        return
+async def _deliver_free_track(callback: CallbackQuery, user, track) -> None:
+    """Выдать/дослать бесплатный трек или отказать по «уже использован». Подписка проверена снаружи."""
+    track_id = track["track_id"]
     if user["got_free_track"]:
         if await db.user_has_track(callback.from_user.id, track_id):
             # повтор после transient-ретрая: трек уже выдан — досылаем файл
@@ -204,4 +197,20 @@ async def claim_free_track(callback: CallbackQuery) -> None:
     )
     if track["file_id"]:
         await callback.message.answer_audio(track["file_id"], title=track["title"])
+
+
+@router.callback_query(F.data.startswith("free:"))
+async def claim_free_track(callback: CallbackQuery) -> None:
+    track_id = int(callback.data.split(":", 1)[1])
+    user = await db.get_user(callback.from_user.id)
+    if user is None:
+        await callback.answer("Нажмите /start для регистрации", show_alert=True)
+        return
+    track = await db.get_track(track_id)
+    if track is None:
+        await callback.answer("Трек не найден", show_alert=True)
+        return
+    if not await require_subscription(callback, track_id, "free"):
+        return
+    await _deliver_free_track(callback, user, track)
 

@@ -1,7 +1,6 @@
 import logging
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -11,6 +10,7 @@ from aiogram.types import (
 from app import db
 from app.config import settings
 from app.keyboards import BACK_LABEL, CB_MENU
+from app.subscription import is_subscribed, require_subscription
 
 logger = logging.getLogger(__name__)
 
@@ -30,52 +30,6 @@ BONUS_NOTIFY_TEXT = (
     "🎉 Отлично! Вы пригласили уже {count} друзей — "
     "у вас открыт бонус: ещё один трек на выбор из каталога 🎁"
 )
-
-SUBSCRIBE_TEXT = (
-    "Чтобы получить бонусный трек, подпишитесь на наш канал {channel} 🌿\n\n"
-    "Там — новые практики, разборы и анонсы.\n"
-    "После подписки вернитесь сюда и нажмите «Проверить подписку»."
-)
-
-
-def subscribe_kb(track_id: int) -> InlineKeyboardMarkup:
-    channel = settings.channel_username.lstrip("@")
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="📢 Подписаться на канал",
-                    url=f"https://t.me/{channel}",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="✅ Проверить подписку",
-                    callback_data=f"checksub:{track_id}",
-                )
-            ],
-            [InlineKeyboardButton(text=BACK_LABEL, callback_data="catalog")],
-        ]
-    )
-
-
-async def is_subscribed(bot, user_id: int) -> bool | None:
-    """True — подписан; False — нет; None — проверка недоступна (бот не админ канала и т.п.)."""
-    try:
-        member = await bot.get_chat_member(settings.channel_username, user_id)
-    except TelegramBadRequest as exc:
-        msg = str(exc).lower()
-        if "user not found" in msg or "participant_id_invalid" in msg:
-            return False
-        logger.warning("getChatMember error for %s: %s", user_id, exc)
-        return None
-    except TelegramAPIError:
-        logger.exception("getChatMember failed for %s", user_id)
-        return None
-    status = getattr(member, "status", "")
-    if status == "restricted":
-        return bool(getattr(member, "is_member", False))
-    return status in ("creator", "administrator", "member")
 
 _bot_username: str | None = None
 
@@ -170,37 +124,40 @@ async def claim_bonus_track(callback: CallbackQuery) -> None:
             show_alert=True,
         )
         return
-    sub = await is_subscribed(callback.bot, callback.from_user.id)
-    if sub is not True:
-        if sub is None:
-            await callback.answer(
-                "Проверка подписки временно недоступна — попробуйте позже 🙌",
-                show_alert=True,
-            )
-        else:
-            await callback.message.edit_text(
-                SUBSCRIBE_TEXT.format(channel=settings.channel_username),
-                reply_markup=subscribe_kb(track_id),
-            )
+    if not await require_subscription(callback, track_id, "bonus"):
         return
     await _grant_bonus_track(callback, track_id)
 
 
 @router.callback_query(F.data.startswith("checksub:"))
 async def check_subscription(callback: CallbackQuery) -> None:
-    track_id = int(callback.data.split(":", 1)[1])
-    if await bonuses_available(callback.from_user.id) <= 0:
-        await callback.answer(
-            "Бонусных треков пока нет — пригласите друзей по своей ссылке 🎁",
-            show_alert=True,
-        )
-        return
+    _, kind, tid = callback.data.split(":", 2)
+    track_id = int(tid)
     sub = await is_subscribed(callback.bot, callback.from_user.id)
     if sub is not True:
         await callback.answer(
             "Подписка не найдена — подпишитесь на канал и нажмите снова 🙌"
             if sub is False
             else "Проверка подписки временно недоступна — попробуйте позже 🙌",
+            show_alert=True,
+        )
+        return
+    if kind == "free":
+        from app.handlers.catalog import _deliver_free_track
+
+        user = await db.get_user(callback.from_user.id)
+        if user is None:
+            await callback.answer("Нажмите /start для регистрации", show_alert=True)
+            return
+        track = await db.get_track(track_id)
+        if track is None:
+            await callback.answer("Трек не найден", show_alert=True)
+            return
+        await _deliver_free_track(callback, user, track)
+        return
+    if await bonuses_available(callback.from_user.id) <= 0:
+        await callback.answer(
+            "Бонусных треков пока нет — пригласите друзей по своей ссылке 🎁",
             show_alert=True,
         )
         return
