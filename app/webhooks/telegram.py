@@ -1,6 +1,10 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 
 from aiogram.types import Update
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -17,5 +21,10 @@ async def telegram_webhook(request: Request) -> dict:
     ) != settings.telegram_webhook_secret:
         raise HTTPException(status_code=403, detail="Forbidden")
     update = Update.model_validate(await request.json())
-    await request.app.state.dp.feed_update(bot, update)
+    try:
+        await request.app.state.dp.feed_update(bot, update)
+    except Exception:
+        # вебхук всегда отвечает 200 — иначе Telegram ретраит апдейт,
+        # очередь растёт, кнопки у пользователя «зависают»
+        logger.exception("Error handling update %s", update.update_id)
     return {"ok": True}

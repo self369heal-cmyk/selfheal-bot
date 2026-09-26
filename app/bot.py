@@ -5,6 +5,7 @@ from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
 
 from app.config import settings
+from app.middlewares import CallbackGuardMiddleware
 from app.handlers import (
     backupdb,
     catalog,
@@ -35,6 +36,7 @@ def create_bot() -> Bot:
 
 def create_dispatcher() -> Dispatcher:
     dp = Dispatcher()
+    dp.callback_query.middleware(CallbackGuardMiddleware())
     dp.include_router(start.router)
     dp.include_router(catalog.router)
     dp.include_router(referral.router)
