@@ -19,9 +19,11 @@ from app.handlers import (
 def create_bot() -> Bot:
     session = None
     if settings.telegram_api_base:
+        api_base = settings.telegram_api_base.rstrip("/")
         session = AiohttpSession(
             api=TelegramAPIServer(
-                base=f"{settings.telegram_api_base.rstrip('/')}/bot{{token}}/{{method}}"
+                base=f"{api_base}/bot{{token}}/{{method}}",
+                file=f"{api_base}/file/bot{{token}}/{{path}}",
             )
         )
     return Bot(
