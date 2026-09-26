@@ -18,12 +18,15 @@ const HOOKS = {
 
 const TG_API = "https://api.telegram.org";
 
+// Origin по умолчанию для /webhooks/* (основной бот)
+const DEFAULT_ORIGIN = "https://bot.selfheal369.ru";
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Входящий вебхук от Telegram
+    // Входящий вебхук от Telegram (адресованный по имени: /hook/<name>)
     if (path.startsWith("/hook/")) {
       const name = path.slice("/hook/".length).replace(/\/.*$/, "");
       const target = HOOKS[name];
@@ -31,6 +34,15 @@ export default {
         return new Response("unknown hook", { status: 404 });
       }
       return fetch(target + url.search, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+      });
+    }
+
+    // Входящий вебхук по пути /webhooks/* — пересылаем на origin как есть
+    if (path.startsWith("/webhooks/")) {
+      return fetch(DEFAULT_ORIGIN + path + url.search, {
         method: request.method,
         headers: request.headers,
         body: request.body,
