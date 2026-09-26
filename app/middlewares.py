@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 # Повторное нажатие той же кнопки тем же пользователем в пределах
 # этого окна игнорируется (предохранитель от дабл-кликов и ретраев).
-DEBOUNCE_SECONDS = 1.5
+DEBOUNCE_SECONDS = 0.6
 
 
 class CallbackGuardMiddleware(BaseMiddleware):
