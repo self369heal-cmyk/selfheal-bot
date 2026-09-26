@@ -34,13 +34,18 @@ const UPSTREAM_TIMEOUT_MS = 6000;
 
 async function relayInbound(target, request) {
   const body = await request.arrayBuffer();
+  // REG.RU middlebox молча убивает простаивающие pooled-соединения от edge —
+  // просим origin закрыть соединение после ответа, чтобы каждый запрос шёл
+  // по свежему коннекту и пул не копил «дохлые».
+  const headers = new Headers(request.headers);
+  headers.set("Connection", "close");
   const t0 = Date.now();
   let lastErr;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const resp = await fetch(target, {
         method: request.method,
-        headers: request.headers,
+        headers,
         body: body.byteLength ? body : null,
         signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
       });
