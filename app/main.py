@@ -43,6 +43,7 @@ async def lifespan(app: FastAPI):
                     bot.set_webhook(
                         settings.telegram_webhook_url,
                         drop_pending_updates=True,
+                        secret_token=settings.telegram_webhook_secret or None,
                     ),
                     timeout=15,
                 )

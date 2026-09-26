@@ -18,6 +18,9 @@ const HOOKS = {
 
 const TG_API = "https://api.telegram.org";
 
+// Каким ботам разрешено ходить через релей (префикс токена = числовой id бота)
+const ALLOWED_BOT_IDS = ["8801587624"];
+
 // Origin по умолчанию для /webhooks/* (основной бот)
 const DEFAULT_ORIGIN = "https://bot.selfheal369.ru";
 
@@ -49,8 +52,13 @@ export default {
       });
     }
 
-    // Исходящие вызовы Bot API и скачивание файлов
+    // Исходящие вызовы Bot API и скачивание файлов — только разрешённым ботам
     if (path.startsWith("/bot") || path.startsWith("/file/bot")) {
+      const token = path.replace(/^\/file\/bot|^\/bot/, "").split("/")[0];
+      const botId = token.split(":")[0];
+      if (!ALLOWED_BOT_IDS.includes(botId)) {
+        return new Response("forbidden", { status: 403 });
+      }
       return fetch(TG_API + path + url.search, {
         method: request.method,
         headers: request.headers,
