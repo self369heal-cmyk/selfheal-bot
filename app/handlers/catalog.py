@@ -131,7 +131,6 @@ def track_kb(
 @router.callback_query(F.data == "catalog")
 async def show_catalog(callback: CallbackQuery) -> None:
     await callback.message.edit_text(CATALOG_TITLE, reply_markup=catalog_kb())
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("sec:"))
@@ -145,7 +144,6 @@ async def show_section(callback: CallbackQuery) -> None:
         f"{SECTIONS.get(section, 'Раздел')} — выберите трек:",
         reply_markup=section_kb(tracks),
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("track:"))
@@ -168,7 +166,6 @@ async def show_track(callback: CallbackQuery) -> None:
             track, free_available, owned, callback.from_user.id, bonus_available
         ),
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("free:"))
@@ -178,15 +175,22 @@ async def claim_free_track(callback: CallbackQuery) -> None:
     if user is None:
         await callback.answer("Нажмите /start для регистрации", show_alert=True)
         return
+    track = await db.get_track(track_id)
+    if track is None:
+        await callback.answer("Трек не найден", show_alert=True)
+        return
     if user["got_free_track"]:
+        if await db.user_has_track(callback.from_user.id, track_id):
+            # повтор после transient-ретрая: трек уже выдан — досылаем файл
+            if track["file_id"]:
+                await callback.message.answer_audio(
+                    track["file_id"], title=track["title"]
+                )
+            return
         await callback.answer(
             "Бесплатный трек уже использован — этот можно купить 🙌",
             show_alert=True,
         )
-        return
-    track = await db.get_track(track_id)
-    if track is None:
-        await callback.answer("Трек не найден", show_alert=True)
         return
 
     await db.mark_got_free_track(callback.from_user.id)
@@ -200,5 +204,4 @@ async def claim_free_track(callback: CallbackQuery) -> None:
     )
     if track["file_id"]:
         await callback.message.answer_audio(track["file_id"], title=track["title"])
-    await callback.answer()
 

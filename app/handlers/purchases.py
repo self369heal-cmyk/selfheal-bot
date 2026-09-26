@@ -50,12 +50,10 @@ async def show_purchases(callback: CallbackQuery) -> None:
             ]
         )
         await callback.message.edit_text(PURCHASES_EMPTY, reply_markup=kb)
-        await callback.answer()
         return
     await callback.message.edit_text(
         PURCHASES_TITLE, reply_markup=purchases_kb(tracks)
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("redl:"))
@@ -89,4 +87,3 @@ async def redeliver_track(callback: CallbackQuery) -> None:
                 show_alert=True,
             )
             return
-    await callback.answer()

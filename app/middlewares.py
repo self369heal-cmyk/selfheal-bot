@@ -3,7 +3,10 @@ import time
 from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery
+
+from app.retry import retry_transient
 
 logger = logging.getLogger(__name__)
 
@@ -38,4 +41,12 @@ class CallbackGuardMiddleware(BaseMiddleware):
             return None
         self._last[key] = now
 
-        return await handler(event, data)
+        try:
+            return await retry_transient(
+                lambda: handler(event, data), attempts=3, delay=0.3
+            )
+        except TelegramBadRequest as exc:
+            # повторное редактирование до того же состояния — не ошибка
+            if "message is not modified" in str(exc):
+                return None
+            raise
