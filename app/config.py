@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     webhook_base_url: str = ""  # публичный HTTPS-адрес сервера, напр. https://bot.example.com
     fly_app_name: str = ""  # выставляется Fly.io автоматически
     telegram_webhook_path: str = "/webhooks/telegram"
+    # секрет вебхука: Telegram шлёт его в X-Telegram-Bot-Api-Secret-Token;
+    # непустое значение = отклонять апдейты без верного заголовка
+    telegram_webhook_secret: str = ""
     getcourse_webhook_path: str = "/webhooks/getcourse"
     webapp_host: str = "0.0.0.0"
     webapp_port: int = 8000
@@ -21,6 +24,9 @@ class Settings(BaseSettings):
     )
     # ключ для GET /admin/db-dump (выгрузка базы для бэкапов); пусто = отключено
     backup_key: str = ""
+    # прокси/замена Bot API endpoint (напр. https://tg-proxy.example.workers.dev),
+    # когда api.telegram.org недоступен с сервера; пусто = https://api.telegram.org
+    telegram_api_base: str = ""
 
     @property
     def public_base_url(self) -> str:
