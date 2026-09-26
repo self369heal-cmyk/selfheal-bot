@@ -40,7 +40,6 @@ async def cmd_menu(message: Message) -> None:
 @router.callback_query(F.data == CB_MENU)
 async def show_menu(callback: CallbackQuery) -> None:
     await callback.message.edit_text(MENU_TITLE, reply_markup=main_menu_kb())
-    await callback.answer()
 
 
 @router.callback_query(F.data.in_(SECTION_SCREENS.keys()))
@@ -51,7 +50,6 @@ async def show_section(callback: CallbackQuery) -> None:
     else:
         kb = contact_vlademir_kb(prefill or None)
     await callback.message.edit_text(text, reply_markup=kb)
-    await callback.answer()
 
 
 @router.callback_query(F.data == "video")
@@ -67,4 +65,3 @@ async def show_video(callback: CallbackQuery) -> None:
         ]
     )
     await callback.message.edit_text(texts.VIDEO, reply_markup=kb)
-    await callback.answer()

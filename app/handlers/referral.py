@@ -77,7 +77,6 @@ async def show_referral(callback: CallbackQuery) -> None:
         REFERRAL_TEXT.format(link=link, count=count, next_milestone=next_milestone(count)),
         reply_markup=referral_kb(),
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data == "copy_ref_link")
@@ -86,7 +85,6 @@ async def copy_ref_link(callback: CallbackQuery) -> None:
     await callback.message.answer(
         f"Ваша пригласительная ссылка — нажмите, чтобы скопировать:\n<code>{link}</code>"
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("bonus:"))
@@ -121,4 +119,3 @@ async def claim_bonus_track(callback: CallbackQuery) -> None:
     )
     if track["file_id"]:
         await callback.message.answer_audio(track["file_id"], title=track["title"])
-    await callback.answer()
