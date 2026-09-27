@@ -6,17 +6,17 @@ from app.texts import VLADEMIR_URL
 
 MENU_TITLE = "Главное меню:"
 
-# (callback_data, текст кнопки) — дословно из раздела 2.2 документа
-MENU_BUTTONS: list[tuple[str, str]] = [
-    ("catalog", "🔊 Каталог треков «Коды Исцеления Тела»"),
-    ("howto", "📖 Как слушать КИТ"),
-    ("referral", "🎁 Пригласи друга и получи бонус"),
-    ("purchases", "💳 Мои покупки"),
-    ("support", "💬 Поддержка / вопрос мастеру"),
-    ("custom_track", "🎼 Создать индивидуальный трек исцеление или омоложения"),
-    ("session", "🗓 Запись на индивидуальный сеанс"),
-    ("video", "▶️ Приобрести видео медитации"),
-    ("author", "✨ Про автора треков и технологию"),
+# (callback_data, текст кнопки, style) — тексты дословно из раздела 2.2 документа
+MENU_BUTTONS: list[tuple[str, str, str | None]] = [
+    ("catalog", "🔊 Каталог треков «Коды Исцеления Тела»", "primary"),
+    ("referral", "🎁 Пригласи друга и получи бонус", "success"),
+    ("howto", "📖 Как слушать КИТ", None),
+    ("purchases", "💳 Мои покупки", None),
+    ("support", "💬 Поддержка / вопрос мастеру", None),
+    ("custom_track", "🎼 Создать индивидуальный трек исцеление или омоложения", None),
+    ("session", "🗓 Запись на индивидуальный сеанс", None),
+    ("video", "▶️ Приобрести видео медитации", None),
+    ("author", "✨ Про автора треков и технологию", None),
 ]
 
 CB_MENU = "menu"
@@ -27,8 +27,8 @@ BACK_LABEL = "⬅️ В главное меню"
 def main_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=label, callback_data=data)]
-            for data, label in MENU_BUTTONS
+            [InlineKeyboardButton(text=label, callback_data=data, style=style)]
+            for data, label, style in MENU_BUTTONS
         ]
     )
 
