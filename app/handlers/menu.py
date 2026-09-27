@@ -25,7 +25,6 @@ router = Router()
 
 SECTION_SCREENS: dict[str, tuple[str, object]] = {
     "howto": (texts.HOW_TO_LISTEN, None),
-    "author": (texts.ABOUT_AUTHOR, None),
     "custom_track": (texts.CUSTOM_TRACK, texts.CUSTOM_TRACK_PREFILL),
     "session": (texts.SESSION, texts.SESSION_PREFILL),
     "support": (texts.SUPPORT, ""),
@@ -50,6 +49,13 @@ async def show_section(callback: CallbackQuery) -> None:
     else:
         kb = contact_vlademir_kb(prefill or None)
     await callback.message.edit_text(text, reply_markup=kb)
+
+
+@router.callback_query(F.data == "author")
+async def show_author(callback: CallbackQuery) -> None:
+    # автор + дисклеймер идут отдельными сообщениями и остаются в чате
+    await callback.message.answer(texts.ABOUT_AUTHOR)
+    await callback.message.answer(texts.DISCLAIMER)
 
 
 @router.callback_query(F.data == "video")
