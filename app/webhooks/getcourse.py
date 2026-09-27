@@ -114,6 +114,21 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
             )
 
     await db.add_user_track(telegram_id, track["track_id"])
+    try:
+        from app.handlers.referral import PURCHASES_BUTTON_TEXT
+        from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+        await bot.send_message(
+            telegram_id,
+            "Все ваши треки — в разделе «Мои покупки».",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text=PURCHASES_BUTTON_TEXT, callback_data="purchases")]
+                ]
+            ),
+        )
+    except TelegramAPIError:
+        logger.exception("purchases-button message failed for user %s", telegram_id)
     logger.info(
         "Delivered track %s to user %s after GetCourse payment",
         track["track_id"],

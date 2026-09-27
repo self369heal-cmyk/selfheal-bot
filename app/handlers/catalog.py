@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 from app import db
 from app.config import settings
-from app.handlers.referral import track_caption
+from app.handlers.referral import send_track
 from app.keyboards import BACK_LABEL, CB_MENU
 from app.subscription import require_subscription
 
@@ -185,13 +185,7 @@ async def _deliver_free_track(callback: CallbackQuery, user, track) -> None:
         if await db.user_has_track(callback.from_user.id, track_id):
             # повтор после transient-ретрая: трек уже выдан — досылаем файл
             if track["file_id"]:
-                await callback.message.answer_audio(
-                    track["file_id"],
-                    title=track["title"],
-                    caption=await track_caption(
-                        callback.bot, callback.from_user.id, track
-                    ),
-                )
+                await send_track(callback.message, callback.from_user.id, track)
             return
         await callback.answer(
             "Бесплатный трек уже использован, этот можно купить 🙌",
@@ -212,13 +206,7 @@ async def _deliver_free_track(callback: CallbackQuery, user, track) -> None:
         "Подробные рекомендации по прослушиванию в разделе «📖 Как слушать КИТ».",
     )
     if track["file_id"]:
-        await callback.message.answer_audio(
-            track["file_id"],
-            title=track["title"],
-            caption=await track_caption(
-                callback.bot, callback.from_user.id, track
-            ),
-        )
+        await send_track(callback.message, callback.from_user.id, track)
 
 
 @router.callback_query(F.data.startswith("free:"))

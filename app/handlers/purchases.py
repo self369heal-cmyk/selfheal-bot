@@ -9,7 +9,7 @@ from aiogram.types import (
 )
 
 from app import db
-from app.handlers.referral import track_caption
+from app.handlers.referral import PURCHASES_BUTTON_TEXT, track_caption
 from app.keyboards import BACK_LABEL, CB_MENU
 
 logger = logging.getLogger(__name__)
@@ -91,3 +91,11 @@ async def redeliver_track(callback: CallbackQuery) -> None:
                 show_alert=True,
             )
             return
+    await callback.message.answer(
+        "Все ваши треки — в разделе «Мои покупки».",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=PURCHASES_BUTTON_TEXT, callback_data="purchases")]
+            ]
+        ),
+    )
