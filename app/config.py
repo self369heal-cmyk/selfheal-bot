@@ -18,9 +18,13 @@ class Settings(BaseSettings):
     webapp_port: int = 8000
     database_path: str = "selfheal.db"
     admin_telegram_id: int = 5925313775  # telegram_id администратора (команда /getfileid)
-    # шаблон ссылки оплаты GetCourse: плейсхолдеры {track_id}, {telegram_id}, {track_title}
+    # шаблон ссылки оплаты GetCourse: плейсхолдеры
+    # {track_id}, {track_slug}, {telegram_id}, {track_title}
+    # p_telegram_id заполняет скрытое поле формы, utm_term маркирует заказ
+    # для процесса «Выдача трека после оплаты»
     getcourse_pay_url_template: str = (
-        "https://edu.selfheal369.ru/pay-stub?track={track_id}&telegram_id={telegram_id}"
+        "https://edu.selfheal369.ru/{track_slug}"
+        "?p_telegram_id={telegram_id}&utm_term={telegram_id}"
     )
     # ключ для GET /admin/db-dump (выгрузка базы для бэкапов); пусто = отключено
     backup_key: str = ""
