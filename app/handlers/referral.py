@@ -56,7 +56,7 @@ async def track_caption(bot, telegram_id: int, track, prefix: str = "") -> str:
     ссылку не трогаем.
     """
     link = await ref_link(bot, telegram_id, track["track_id"])
-    suffix = f"\n\n🔗 {link}"
+    suffix = f"\n\n\n🔗 {link}"
     description = track["description"] or ""
     if len(prefix) + len(description) + len(suffix) > MAX_CAPTION_LEN:
         budget = MAX_CAPTION_LEN - len(prefix) - len(suffix) - 1

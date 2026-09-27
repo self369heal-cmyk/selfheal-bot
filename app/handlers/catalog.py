@@ -26,8 +26,8 @@ CATALOG_TITLE = "🔊 Выберите, с чем сейчас работаем:
 # разделы каталога — названия утверждены заказчиком
 SECTIONS: dict[str, str] = {
     "emotions": "😔 Эмоции, психика и расслабление (убрать тревогу, апатию, обиды)",
-    "energy": "🌫 Состояние, энергия, деньги и реализация",
-    "body": "💢 Исцеление тела",
+    "energy": "☀️ Состояние, энергия, деньги и реализация",
+    "body": "💪 Исцеление тела",
 }
 
 
@@ -58,7 +58,7 @@ def track_card_text(track, free_available: bool, owned: bool) -> str:
     price = "бесплатно для вас" if free_available else f"{TRACK_PRICE} ₽"
     description = track["description"] or ""
     # первая строка описания — эмодзи-заголовок caption, в карточке он дублирует название
-    body = description.split("\n", 1)[1] if "\n" in description else description
+    body = description.split("\n", 1)[1].lstrip() if "\n" in description else description
     text = (
         f"🔊 <b>{track['title']}</b>\n"
         f"Раздел: {SECTIONS.get(track['section'], track['section'])}\n"
