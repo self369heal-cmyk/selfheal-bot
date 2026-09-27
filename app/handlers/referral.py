@@ -66,7 +66,7 @@ async def track_caption(bot, telegram_id: int, track, prefix: str = "") -> str:
     link = await ref_link(bot, telegram_id, track["track_id"])
     suffix = (
         f"\n\n{LISTEN_MEMO}"
-        "\n\n\nВаша реферальная ссылка для приглашения друзей:"
+        "\n\n\nРеферальная ссылка, за <b>каждые 3 приглашенных 🎁подарок</b> еще 1 трек:"
         f"\n🔗 {link}"
     )
     description = track["description"] or ""
