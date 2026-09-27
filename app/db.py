@@ -35,6 +35,22 @@ CREATE TABLE IF NOT EXISTS referrals (
     created_at       TEXT NOT NULL,
     source_track_id  INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS user_messages (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id   INTEGER NOT NULL,
+    username      TEXT,
+    full_name     TEXT,
+    content_type  TEXT,
+    text          TEXT,
+    message_id    INTEGER,
+    created_at    TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS inbox_map (
+    admin_message_id INTEGER PRIMARY KEY,
+    user_telegram_id INTEGER NOT NULL
+);
 """
 
 
@@ -278,6 +294,53 @@ async def add_referral(
             ),
         )
         await db.commit()
+
+
+async def save_user_message(
+    telegram_id: int,
+    username: str | None,
+    full_name: str | None,
+    content_type: str,
+    text: str | None,
+    message_id: int,
+) -> None:
+    async with _connect() as db:
+        await db.execute(
+            """
+            INSERT INTO user_messages
+                (telegram_id, username, full_name, content_type, text, message_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                telegram_id,
+                username,
+                full_name,
+                content_type,
+                text,
+                message_id,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        await db.commit()
+
+
+async def map_admin_message(admin_message_id: int, user_telegram_id: int) -> None:
+    async with _connect() as db:
+        await db.execute(
+            "INSERT OR REPLACE INTO inbox_map (admin_message_id, user_telegram_id) VALUES (?, ?)",
+            (admin_message_id, user_telegram_id),
+        )
+        await db.commit()
+
+
+async def get_inbox_user(admin_message_id: int) -> int | None:
+    async with _connect() as db:
+        cursor = await db.execute(
+            "SELECT user_telegram_id FROM inbox_map WHERE admin_message_id = ?",
+            (admin_message_id,),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else None
 
 
 async def count_referrals(referrer_id: int) -> int:

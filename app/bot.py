@@ -12,6 +12,7 @@ from app.handlers import (
     backupdb,
     catalog,
     getfileid,
+    inbox,
     menu,
     purchases,
     referral,
@@ -55,4 +56,6 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(menu.router)
     dp.include_router(getfileid.router)
     dp.include_router(backupdb.router)
+    # catch-all последним: всё, что не съели остальные роутеры, уходит админу
+    dp.include_router(inbox.router)
     return dp
