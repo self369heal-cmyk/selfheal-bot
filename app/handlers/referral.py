@@ -48,15 +48,24 @@ async def ref_link(bot, telegram_id: int, track_id: int | None = None) -> str:
 
 MAX_CAPTION_LEN = 1024
 
+LISTEN_MEMO = (
+    "🔁 Включите повтор (loop) в плеере Telegram — трек будет играть "
+    "непрерывно, до ~5 часов. Слушайте на любой громкости, даже минимальной, "
+    "наушники не обязательны. Можно во время дел, сна или работы. "
+    "Задайте намерение и не анализируйте — просто слушайте, чем дольше, "
+    "тем глубже эффект."
+)
+
 
 async def track_caption(bot, telegram_id: int, track, prefix: str = "") -> str:
-    """Caption к аудио: описание трека + строка с персональной ссылкой.
+    """Caption к аудио: описание трека + памятка + строка с персональной ссылкой.
 
     Лимит Telegram — 1024 символа: при переполнении режем описание,
     ссылку не трогаем.
     """
     link = await ref_link(bot, telegram_id, track["track_id"])
     suffix = (
+        f"\n\n{LISTEN_MEMO}"
         "\n\n\nВаша реферальная ссылка для приглашения друзей:"
         f"\n🔗 {link}"
     )
@@ -85,6 +94,7 @@ async def send_track(message, telegram_id: int, track) -> None:
         track["file_id"],
         title=track["title"],
         caption=await track_caption(message.bot, telegram_id, track),
+        protect_content=True,
     )
     await message.answer(
         "Все ваши треки — в разделе «Мои покупки».",

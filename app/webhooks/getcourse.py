@@ -145,6 +145,7 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
             track["file_id"],
             title=track["title"],
             caption=caption,
+            protect_content=True,
         )
     except TelegramAPIError:
         logger.exception(
@@ -153,7 +154,10 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
             track["track_id"],
         )
         try:
-            await bot.send_document(telegram_id, track["file_id"], caption=caption)
+            await bot.send_document(
+                telegram_id, track["file_id"], caption=caption,
+                protect_content=True,
+            )
         except TelegramAPIError:
             logger.exception("sendDocument also failed for user %s", telegram_id)
             return JSONResponse(
