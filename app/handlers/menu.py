@@ -10,6 +10,7 @@ from aiogram.types import (
 )
 
 from app import texts
+from app.retry import TRANSIENT_ERRORS, retry_transient
 from app.keyboards import (
     BACK_LABEL,
     CB_MENU,
@@ -53,9 +54,13 @@ async def show_section(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "author")
 async def show_author(callback: CallbackQuery) -> None:
-    # автор + дисклеймер идут отдельными сообщениями и остаются в чате
-    await callback.message.answer(texts.ABOUT_AUTHOR)
-    await callback.message.answer(texts.DISCLAIMER)
+    # дисклеймер и автор идут отдельными сообщениями и остаются в чате;
+    # retry на каждое сообщение, чтобы повтор хендлера не дублировал их
+    for text in (texts.DISCLAIMER, texts.ABOUT_AUTHOR):
+        try:
+            await retry_transient(lambda t=text: callback.message.answer(t))
+        except TRANSIENT_ERRORS:
+            logger.exception("failed to send author screen message")
 
 
 @router.callback_query(F.data == "video")
