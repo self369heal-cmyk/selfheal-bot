@@ -1,0 +1,26 @@
+[Unit]
+Description=Telegram alert when selfheal-bot fails
+
+[Service]
+Type=oneshot
+ExecStart=/opt/bots/selfheal-bot/notify.sh "🔴 Сервис selfheal-bot упал и не поднялся. Проверьте: ssh root@VPS, journalctl -u selfheal-bot -n 50"
+===DROPIN===
+[Unit]
+OnFailure=selfheal-bot-notify.service
+===HC===
+[Unit]
+Description=Health check selfheal-bot via public URL
+
+[Service]
+Type=oneshot
+ExecStart=/opt/bots/selfheal-bot/healthcheck.sh
+===TIMER===
+[Unit]
+Description=Check selfheal-bot health every 2 min
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target
