@@ -20,7 +20,7 @@ router = Router()
 
 TRACK_PRICE = 900
 
-CATALOG_TITLE = "🎵 Выберите, с чем сейчас работаем:"
+CATALOG_TITLE = "🔊 Выберите, с чем сейчас работаем:"
 
 # разделы каталога из разделов 1.3/2.3 документа
 SECTIONS: dict[str, str] = {
@@ -54,17 +54,15 @@ def section_kb(tracks: list) -> InlineKeyboardMarkup:
 
 
 def track_card_text(track, free_available: bool, owned: bool) -> str:
-    duration = f"{track['duration_min']} мин" if track["duration_min"] else "уточняется"
-    price = "<b>бесплатно для вас</b>" if free_available else f"<b>{TRACK_PRICE} ₽</b>"
+    price = "бесплатно для вас" if free_available else f"{TRACK_PRICE} ₽"
     text = (
-        f"🎧 <b>{track['title']}</b>\n"
+        f"🔊 <b>{track['title']}</b>\n"
         f"Раздел: {SECTIONS.get(track['section'], track['section'])}\n"
-        f"Длительность: {duration}\n"
         f"Для чего: {track['description']}\n"
         f"Цена: {price}"
     )
     if owned:
-        text += "\n\n🎧 Этот трек уже у вас. Найдите его в разделе «💳 Мои покупки»."
+        text += "\n\n🔊 Этот трек уже у вас. Найдите его в разделе «💳 Мои покупки»."
     return text
 
 
@@ -142,7 +140,7 @@ async def show_section(callback: CallbackQuery) -> None:
         await callback.answer("В этом разделе пока нет треков", show_alert=True)
         return
     await callback.message.edit_text(
-        f"{SECTIONS.get(section, 'Раздел')}: выберите трек 🎵",
+        f"{SECTIONS.get(section, 'Раздел')}: выберите трек 🔊",
         reply_markup=section_kb(tracks),
     )
 
@@ -192,8 +190,11 @@ async def _deliver_free_track(callback: CallbackQuery, user, track) -> None:
 
     await callback.message.edit_text(
         f"🎁 <b>{track['title']}</b>: ваш подарок!\n\n"
-        "Трек придёт следующим сообщением, как только аудиофайл будет загружен в базу.\n\n"
-        "Советы по прослушиванию в разделе «📖 Как слушать КИТ».",
+        "Трек придёт следующим сообщением. Желательно перед запуском трека "
+        "<b>выбрать намерение и свой желаемый результат</b>. "
+        "Слушайте на любой комфортной громкости и любое количество времени до результата. "
+        "Наушники не обязательно, можно слушать из телефона на минимальной громкости.\n\n"
+        "Подробные рекомендации по прослушиванию в разделе «📖 Как слушать КИТ».",
     )
     if track["file_id"]:
         await callback.message.answer_audio(track["file_id"], title=track["title"])

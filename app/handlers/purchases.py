@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 
-PURCHASES_TITLE = "Вот все треки, которые у вас уже есть 🎧"
+PURCHASES_TITLE = "Вот все треки, которые у вас уже есть 🔊"
 PURCHASES_EMPTY = (
-    "У вас пока нет треков.\n\nЗагляните в каталог: <b>первый трек в подарок</b> 🎁"
+    "У вас пока нет треков.\n\nЗагляните в каталог: <b>первый трек в подарок 🎁</b>"
 )
 
 
@@ -43,7 +43,7 @@ async def show_purchases(callback: CallbackQuery) -> None:
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🎧 В каталог", callback_data="catalog"
+                        text="🔊 В каталог", callback_data="catalog"
                     )
                 ],
                 [InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)],
