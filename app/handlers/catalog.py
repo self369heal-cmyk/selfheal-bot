@@ -23,6 +23,22 @@ TRACK_PRICE = 900
 
 CATALOG_TITLE = "🔊 Выберите, с чем сейчас работаем:"
 
+# track_id -> slug страницы оплаты GetCourse (edu.selfheal369.ru/{slug})
+TRACK_PAY_SLUGS = {
+    1: "antistress",
+    2: "emotions",
+    3: "sleep",
+    4: "mood",
+    5: "focus",
+    6: "energy",
+    7: "money",
+    8: "soul",
+    9: "spine",
+    10: "head",
+    11: "digestion",
+    12: "immunity",
+}
+
 # разделы каталога — названия утверждены заказчиком
 SECTIONS: dict[str, str] = {
     "emotions": "😔 Эмоции, психика и расслабление (убрать тревогу, апатию, обиды)",
@@ -73,6 +89,7 @@ def track_card_text(track, free_available: bool, owned: bool) -> str:
 def pay_url(track, telegram_id: int) -> str:
     return settings.getcourse_pay_url_template.format(
         track_id=track["track_id"],
+        track_slug=TRACK_PAY_SLUGS.get(track["track_id"], ""),
         telegram_id=telegram_id,
         track_title=quote(track["title"]),
     )
