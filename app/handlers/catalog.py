@@ -11,6 +11,7 @@ from urllib.parse import quote
 
 from app import db
 from app.config import settings
+from app.handlers.referral import track_caption
 from app.keyboards import BACK_LABEL, CB_MENU
 from app.subscription import require_subscription
 
@@ -22,10 +23,10 @@ TRACK_PRICE = 900
 
 CATALOG_TITLE = "🔊 Выберите, с чем сейчас работаем:"
 
-# разделы каталога из разделов 1.3/2.3 документа
+# разделы каталога — названия утверждены заказчиком
 SECTIONS: dict[str, str] = {
-    "emotions": "😔 Эмоции и психика",
-    "energy": "🌟 Состояние и энергия",
+    "emotions": "😔 Эмоции, психика и расслабление (убрать тревогу, апатию, обиды)",
+    "energy": "☀️ Состояние, энергия, деньги и реализация",
     "body": "💪 Исцеление тела",
 }
 
@@ -55,10 +56,13 @@ def section_kb(tracks: list) -> InlineKeyboardMarkup:
 
 def track_card_text(track, free_available: bool, owned: bool) -> str:
     price = "бесплатно для вас" if free_available else f"{TRACK_PRICE} ₽"
+    description = track["description"] or ""
+    # первая строка описания — эмодзи-заголовок caption, в карточке он дублирует название
+    body = description.split("\n", 1)[1].lstrip() if "\n" in description else description
     text = (
         f"🔊 <b>{track['title']}</b>\n"
         f"Раздел: {SECTIONS.get(track['section'], track['section'])}\n"
-        f"Для чего: {track['description']}\n"
+        f"Для чего: {body}\n"
         f"Цена: {price}"
     )
     if owned:
@@ -175,7 +179,11 @@ async def _deliver_free_track(callback: CallbackQuery, user, track) -> None:
             # повтор после transient-ретрая: трек уже выдан — досылаем файл
             if track["file_id"]:
                 await callback.message.answer_audio(
-                    track["file_id"], title=track["title"]
+                    track["file_id"],
+                    title=track["title"],
+                    caption=await track_caption(
+                        callback.bot, callback.from_user.id, track
+                    ),
                 )
             return
         await callback.answer(
@@ -197,7 +205,13 @@ async def _deliver_free_track(callback: CallbackQuery, user, track) -> None:
         "Подробные рекомендации по прослушиванию в разделе «📖 Как слушать КИТ».",
     )
     if track["file_id"]:
-        await callback.message.answer_audio(track["file_id"], title=track["title"])
+        await callback.message.answer_audio(
+            track["file_id"],
+            title=track["title"],
+            caption=await track_caption(
+                callback.bot, callback.from_user.id, track
+            ),
+        )
 
 
 @router.callback_query(F.data.startswith("free:"))

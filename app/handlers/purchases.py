@@ -9,6 +9,7 @@ from aiogram.types import (
 )
 
 from app import db
+from app.handlers.referral import track_caption
 from app.keyboards import BACK_LABEL, CB_MENU
 
 logger = logging.getLogger(__name__)
@@ -69,9 +70,10 @@ async def redeliver_track(callback: CallbackQuery) -> None:
             show_alert=True,
         )
         return
+    caption = await track_caption(callback.bot, callback.from_user.id, track)
     try:
         await callback.message.answer_audio(
-            track["file_id"], title=track["title"]
+            track["file_id"], title=track["title"], caption=caption
         )
     except TelegramAPIError:
         logger.exception(
@@ -80,7 +82,9 @@ async def redeliver_track(callback: CallbackQuery) -> None:
             track_id,
         )
         try:
-            await callback.message.answer_document(track["file_id"])
+            await callback.message.answer_document(
+                track["file_id"], caption=caption
+            )
         except TelegramAPIError:
             await callback.answer(
                 "Не удалось отправить файл. Напишите в поддержку",

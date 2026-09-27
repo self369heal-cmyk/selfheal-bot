@@ -35,11 +35,33 @@ BONUS_NOTIFY_TEXT = (
 _bot_username: str | None = None
 
 
-async def ref_link(bot, telegram_id: int) -> str:
+async def ref_link(bot, telegram_id: int, track_id: int | None = None) -> str:
+    """Персональная реф-ссылка: ref<uid> или ref<uid>_track<tid> для треков."""
     global _bot_username
     if _bot_username is None:
         _bot_username = (await bot.get_me()).username
-    return f"https://t.me/{_bot_username}?start=ref_{telegram_id}"
+    param = f"ref{telegram_id}"
+    if track_id is not None:
+        param += f"_track{track_id}"
+    return f"https://t.me/{_bot_username}?start={param}"
+
+
+MAX_CAPTION_LEN = 1024
+
+
+async def track_caption(bot, telegram_id: int, track, prefix: str = "") -> str:
+    """Caption к аудио: описание трека + строка с персональной ссылкой.
+
+    Лимит Telegram — 1024 символа: при переполнении режем описание,
+    ссылку не трогаем.
+    """
+    link = await ref_link(bot, telegram_id, track["track_id"])
+    suffix = f"\n\n\n🔗 {link}"
+    description = track["description"] or ""
+    if len(prefix) + len(description) + len(suffix) > MAX_CAPTION_LEN:
+        budget = MAX_CAPTION_LEN - len(prefix) - len(suffix) - 1
+        description = description[:budget].rstrip() + "…"
+    return f"{prefix}{description}{suffix}"
 
 
 def next_milestone(count: int) -> int:
@@ -99,7 +121,11 @@ async def _grant_bonus_track(callback: CallbackQuery, track_id: int) -> None:
         # повтор после transient-ретрая: трек уже выдан — досылаем файл
         if track["file_id"]:
             await callback.message.answer_audio(
-                track["file_id"], title=track["title"]
+                track["file_id"],
+                title=track["title"],
+                caption=await track_caption(
+                    callback.bot, callback.from_user.id, track
+                ),
             )
         return
 
@@ -116,7 +142,13 @@ async def _grant_bonus_track(callback: CallbackQuery, track_id: int) -> None:
         "Подробные рекомендации по прослушиванию в разделе «📖 Как слушать КИТ».",
     )
     if track["file_id"]:
-        await callback.message.answer_audio(track["file_id"], title=track["title"])
+        await callback.message.answer_audio(
+            track["file_id"],
+            title=track["title"],
+            caption=await track_caption(
+                callback.bot, callback.from_user.id, track
+            ),
+        )
 
 
 @router.callback_query(F.data.startswith("bonus:"))
