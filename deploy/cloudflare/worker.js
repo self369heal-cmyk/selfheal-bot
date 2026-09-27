@@ -25,7 +25,7 @@ const HOOKS = {
 const TG_API = "https://api.telegram.org";
 
 // Каким ботам разрешено ходить через релей (префикс токена = числовой id бота)
-const ALLOWED_BOT_IDS = ["8801587624"];
+const ALLOWED_BOT_IDS = ["8699077910"];
 
 // Origin по умолчанию для /webhooks/* (основной бот)
 const DEFAULT_ORIGIN = "https://bot.selfheal369.ru";

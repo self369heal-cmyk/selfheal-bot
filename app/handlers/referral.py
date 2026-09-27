@@ -56,12 +56,40 @@ async def track_caption(bot, telegram_id: int, track, prefix: str = "") -> str:
     ссылку не трогаем.
     """
     link = await ref_link(bot, telegram_id, track["track_id"])
-    suffix = f"\n\n\n🔗 {link}"
+    suffix = (
+        "\n\n\nВаша реферальная ссылка для приглашения друзей:"
+        f"\n🔗 {link}"
+    )
     description = track["description"] or ""
     if len(prefix) + len(description) + len(suffix) > MAX_CAPTION_LEN:
         budget = MAX_CAPTION_LEN - len(prefix) - len(suffix) - 1
         description = description[:budget].rstrip() + "…"
     return f"{prefix}{description}{suffix}"
+
+
+PURCHASES_BUTTON_TEXT = "💳 Мои покупки"
+
+
+def purchases_kb() -> InlineKeyboardMarkup:
+    """Одна кнопка «Мои покупки» — отдельное сообщение после выдачи трека."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=PURCHASES_BUTTON_TEXT, callback_data="purchases")]
+        ]
+    )
+
+
+async def send_track(message, telegram_id: int, track) -> None:
+    """Аудио с caption + отдельное сообщение с кнопкой «Мои покупки»."""
+    await message.answer_audio(
+        track["file_id"],
+        title=track["title"],
+        caption=await track_caption(message.bot, telegram_id, track),
+    )
+    await message.answer(
+        "Все ваши треки — в разделе «Мои покупки».",
+        reply_markup=purchases_kb(),
+    )
 
 
 def next_milestone(count: int) -> int:
@@ -120,13 +148,7 @@ async def _grant_bonus_track(callback: CallbackQuery, track_id: int) -> None:
     if await db.user_has_track(callback.from_user.id, track_id):
         # повтор после transient-ретрая: трек уже выдан — досылаем файл
         if track["file_id"]:
-            await callback.message.answer_audio(
-                track["file_id"],
-                title=track["title"],
-                caption=await track_caption(
-                    callback.bot, callback.from_user.id, track
-                ),
-            )
+            await send_track(callback.message, callback.from_user.id, track)
         return
 
     await db.increment_bonus_claimed(callback.from_user.id)
@@ -142,13 +164,7 @@ async def _grant_bonus_track(callback: CallbackQuery, track_id: int) -> None:
         "Подробные рекомендации по прослушиванию в разделе «📖 Как слушать КИТ».",
     )
     if track["file_id"]:
-        await callback.message.answer_audio(
-            track["file_id"],
-            title=track["title"],
-            caption=await track_caption(
-                callback.bot, callback.from_user.id, track
-            ),
-        )
+        await send_track(callback.message, callback.from_user.id, track)
 
 
 @router.callback_query(F.data.startswith("bonus:"))
