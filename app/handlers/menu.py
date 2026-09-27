@@ -61,6 +61,13 @@ async def show_author(callback: CallbackQuery) -> None:
             await retry_transient(lambda t=text: callback.message.answer(t))
         except TRANSIENT_ERRORS:
             logger.exception("failed to send author screen message")
+    # меню выводим заново внизу: старое сообщение меню остаётся выше этих двух
+    try:
+        await retry_transient(
+            lambda: callback.message.answer(MENU_TITLE, reply_markup=main_menu_kb())
+        )
+    except TRANSIENT_ERRORS:
+        logger.exception("failed to resend menu after author screen")
 
 
 @router.callback_query(F.data == "video")
