@@ -51,7 +51,7 @@ TRACKS_SEED: list[tuple[int, str, str, str, str]] = [
      "накопленные в теле.\n\n"
      "Дарит глубокое расслабление и покой, улучшает общее самочувствие.\n\n"
      "Убирает резкие эмоциональные всплески, <b>расслабляет нервную и гормональную систему</b>.",
-     "CQACAgIAAxkBAANjarjsCxL7Gic-m_JvQwrals1E_vQAAlGjAAJDK8lJOmdqCBIU0sA9BA"),
+     "CQACAgIAAxkBAAMJarkAAdlWYB6rArRJJCs85YaflDMDAALXpAACecfISU9sn8q2tnFbPQQ"),
     (2, "Устранение любых негативных эмоций (Обиды, страхи, тревожность, истерика у женщин и детей)", "emotions",
      "😭 Устранение любых негативных эмоций\n\n"
      "Этот КИТ помогает <b>растворить любые негативные эмоции</b>: обиды, страхи, тревожность, "
@@ -59,69 +59,69 @@ TRACKS_SEED: list[tuple[int, str, str, str, str]] = [
      "Слушайте от 4 минут — чем дольше, тем глубже растворяются эмоции.\n\n"
      "Желательно чётко осознавать, какую эмоцию хотите отпустить, но <b>не фокусироваться на ней "
      "навязчиво</b> — она сама постепенно уйдёт.",
-     "CQACAgIAAxkBAANlarjsglEHX65JfLQ3uF79H3txkHQAAlqjAAJDK8lJrZnUr8AtjsY9BA"),
+     "CQACAgIAAxkBAAMLarkBHJ6FA2QSAAFeudZVEUklgr5DAALbpAACecfISaoxsEPh8qLePQQ"),
     (3, "Для хорошего сна и быстрого засыпания (От бессонницы)", "emotions",
      "😴 Для хорошего сна и быстрого засыпания\n\n"
      "Этот КИТ помогает <b>легко и быстро уснуть</b>.\n\n"
      "Включите и слушайте, пока не заснёте — "
      "можно один раз, а можно оставить на всю ночь.\n\n"
      "Улучшает засыпание и качество сна. 💤",
-     "CQACAgIAAxkBAANnarjsyN6PEklbaKvHCEDChLjqV7EAAl-jAAJDK8lJ0VvrMj6UtWs9BA"),
+     "CQACAgIAAxkBAAMNarkBeqd5pOsXDyT9Rpnb40PNmdcAAuCkAAJ5x8hJFVkvJZkLUDc9BA"),
     (4, "Хорошее настроение, радость и активность", "emotions",
      "🤗 Хорошее настроение, радость и активность\n\n"
      "Этот КИТ <b>улучшает самочувствие</b> и синхронизирует работу гормональной системы — "
      "гипофиз, щитовидную железу, надпочечники, репродуктивную систему.\n\n"
      "Дарит <b>ясность, бодрость и активность</b>, улучшает работу мозга и нервной системы. 🌞",
-     "CQACAgIAAxkBAANparjs8vbwlvXHDehSHD9JiyZIuH4AAmejAAJDK8lJ_YYTDqh4Grg9BA"),
+     "CQACAgIAAxkBAAMParkByyS1OVWUgFBW8taHv6Q80nYAAuOkAAJ5x8hJa-HNSi4sQv89BA"),
     (5, "Концентрация, активация и продуктивность", "energy",
      "🥇 Концентрация, активация и продуктивность\n\n"
      "Этот КИТ <b>активирует внутренние ресурсы</b>, включает мотивацию, вдохновение и желание "
      "творить и действовать.\n\n"
      "Помогает услышать себя и свою миссию.\n\n"
      "Усиливает <b>концентрацию и уверенность в себе</b>, даёт ясность. 🎯",
-     "CQACAgIAAxkBAANrarjtHaDuQR66eshguAoklH9J9CYAAm-jAAJDK8lJ8oAtbsQwnP09BA"),
+     "CQACAgIAAxkBAAMRarkCRRfDC1XY625l3mh3dqlR2FAAAuqkAAJ5x8hJQhviK2If5_09BA"),
     (6, "Энергичность, активация силы и бодрости", "energy",
      "⚡ Энергичность, активация силы и бодрость\n\n"
      "Этот КИТ <b>включает состояние энергичности</b>, активирует силы и бодрость, разогревает "
      "мышцы и ресурсы тела.\n\n"
      "Отлично подходит <b>для спорта, тренировок и активных прогулок</b>. 💪",
-     "CQACAgIAAxkBAANtarjtPlQsZjkP-ftOR6Q0-rZOJKsAAnOjAAJDK8lJsiddcQ8E6Vk9BA"),
+     "CQACAgIAAxkBAAMTarkCUQdAXaWCP_4e689kur_RJEAAAuukAAJ5x8hJORFiPo5Edrc9BA"),
     (7, "Деньги, изобилие и материализация", "energy",
      "💰 Деньги, изобилие и материализация\n\n"
      "Этот КИТ <b>усиливает материализацию</b> и помогает войти в состояние изобилия.\n\n"
      "Улучшает отношения с деньгами.\n\n"
      "Включает состояние <b>притяжения денег</b> и заземления. 🌍",
-     "CQACAgIAAxkBAANvarjtYQ568GEwLUrQKnEKvJ_GMFsAAnSjAAJDK8lJMHZp5EWwxDI9BA"),
+     "CQACAgIAAxkBAAMVarkCWW5XfjVDpm-JziITYoBIpBAAAuykAAJ5x8hJmM_bBj0HzhM9BA"),
     (8, "Усиление связи с Душой и Богом", "energy",
      "🙏 Усиление связи с Душой и Богом\n\n"
      "Этот КИТ усиливает <b>связь с душой и Богом</b>.\n\n"
      "В нём собраны разные медитативные состояния, которые помогают настроиться на свой духовный центр.\n\n"
      "Помогает войти в <b>состояние тишины</b> и божественного потока.",
-     "CQACAgIAAxkBAANxarjthXvkjqvyw_TqLrF_0LQ1r0gAAnajAAJDK8lJRzpnKWgUquc9BA"),
+     "CQACAgIAAxkBAAMXarkCXqFKDhVC6jJT2iOE_Ny61D8AAu2kAAJ5x8hJVKge1Y3NHdU9BA"),
     (9, "Здоровая спина, поясница, шея и позвоночник", "body",
      "💃 Здоровая спина, поясница, шея и позвоночник\n\n"
      "В этот КИТ вшиты <b>коды исцеления для тела</b>: спины, поясницы, шеи, костей, суставов "
      "и всего позвоночника.\n\n"
      "Помогает мочеполовой и репродуктивной системе, расслабляет оболочки спинного и головного "
      "мозга — <b>исцеляет то, что чаще всего болит</b>.",
-     "CQACAgIAAxkBAANzarjttfeKznGaiYLu0-M0zv7N2AYAAnmjAAJDK8lJXDGSAV9DyXE9BA"),
+     "CQACAgIAAxkBAAMZarkCfO5l7CtUCecgxSjv9XW2J2QAAu6kAAJ5x8hJ-c2fXurv4Eg9BA"),
     (10, "Здоровая голова и ясность мышления", "body",
      "🧠 Здоровая голова и ясность мышления\n\n"
      "Этот КИТ <b>убирает головные боли</b> и включает ясность в голове.\n\n"
      "Расслабляет оболочки мозга и улучшает циркуляцию спинномозговой жидкости.\n\n"
      "Добавляет больше <b>тишины и ясности мышления</b>.",
-     "CQACAgIAAxkBAAN1arjt1JrE_b-XVqLJLT7UI6u7ZJ0AAnyjAAJDK8lJ3oCS7Ld6tPI9BA"),
+     "CQACAgIAAxkBAAMbarkCfPrjhIU0LFSTB8mMda0ysVsAAu-kAAJ5x8hJTSb1JjwOQLY9BA"),
     (11, "Здоровое пищеварение (ЖКТ)", "body",
      "🍇 Здоровое пищеварение (ЖКТ)\n\n"
      "Этот КИТ <b>улучшает работу органов ЖКТ</b> — кишечника, печени, поджелудочной железы "
      "и желудка.\n\n"
      "Гармонизирует все функции желудочно-кишечного тракта.",
-     "CQACAgIAAxkBAAN3arjt_EeCc5zBSwABWUG-UQMURBaAAAKAowACQyvJSccq45m5lJcuPQQ"),
+     "CQACAgIAAxkBAAMdarkCgYnLZkpl-rJ9ULnV4lKWz-IAAvCkAAJ5x8hJUswcTRRmAAGnPQQ"),
     (12, "Сильный иммунитет", "body",
      "🛡️ Сильный иммунитет\n\n"
      "Этот КИТ помогает <b>быстрее оздоровиться</b> и включает иммунитет на полную мощность.\n\n"
      "Усиливает <b>защитные функции организма</b>.",
-     "CQACAgIAAxkBAAN5arjuEjM_Pr_WHIEb6Wcu4BV-x8IAAoKjAAJDK8lJyHwjUz_ud209BA"),
+     "CQACAgIAAxkBAAMfarkCgwPdNCwOwJQZURGwH1dHic0AAvGkAAJ5x8hJBq4OrUMCPb89BA"),
 ]
 
 
