@@ -9,8 +9,8 @@ from app.keyboards import BACK_LABEL
 logger = logging.getLogger(__name__)
 
 SUBSCRIBE_TEXT = (
-    "Чтобы получить трек, подпишитесь на наш канал {channel} 🌿\n\n"
-    "Там — новые практики, разборы и анонсы.\n"
+    "Чтобы получить трек, <b>подпишитесь на канал</b> {channel} 🌿\n\n"
+    "Там много полезного (практики, эфиры и анонсы).\n\n"
     "После подписки вернитесь сюда и нажмите «Проверить подписку»."
 )
 
@@ -62,7 +62,7 @@ async def require_subscription(callback, track_id: int, kind: str) -> bool:
         return True
     if sub is None:
         await callback.answer(
-            "Проверка подписки временно недоступна — попробуйте позже 🙌",
+            "Проверка подписки временно недоступна. Попробуйте позже 🙌",
             show_alert=True,
         )
     else:

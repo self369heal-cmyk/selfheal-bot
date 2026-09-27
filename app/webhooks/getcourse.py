@@ -92,7 +92,7 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
             telegram_id,
             track["file_id"],
             title=track["title"],
-            caption="Спасибо за покупку 🎧 Советы по прослушиванию — в разделе «📖 Как слушать КИТ».",
+            caption="Спасибо за покупку 🔊 Советы по прослушиванию в разделе «📖 Как слушать КИТ».",
         )
     except TelegramAPIError:
         logger.exception(

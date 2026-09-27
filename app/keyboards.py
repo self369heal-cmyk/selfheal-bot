@@ -8,7 +8,7 @@ MENU_TITLE = "Главное меню:"
 
 # (callback_data, текст кнопки) — дословно из раздела 2.2 документа
 MENU_BUTTONS: list[tuple[str, str]] = [
-    ("catalog", "🎧 Каталог треков «Коды Исцеления Тела»"),
+    ("catalog", "🔊 Каталог треков «Коды Исцеления Тела»"),
     ("howto", "📖 Как слушать КИТ"),
     ("referral", "🎁 Пригласи друга и получи бонус"),
     ("purchases", "💳 Мои покупки"),
@@ -36,7 +36,7 @@ def main_menu_kb() -> InlineKeyboardMarkup:
 def open_catalog_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Открыть каталог 🎧", callback_data=CB_CATALOG)]
+            [InlineKeyboardButton(text="Открыть каталог 🔊", callback_data=CB_CATALOG)]
         ]
     )
 

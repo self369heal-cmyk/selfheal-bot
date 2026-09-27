@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 
-PURCHASES_TITLE = "Вот все треки, которые у вас уже есть 🎧"
+PURCHASES_TITLE = "Вот все треки, которые у вас уже есть 🔊"
 PURCHASES_EMPTY = (
-    "У вас пока нет треков — загляните в каталог: первый трек — в подарок 🎁"
+    "У вас пока нет треков.\n\nЗагляните в каталог: <b>первый трек в подарок 🎁</b>"
 )
 
 
@@ -25,7 +25,7 @@ def purchases_kb(tracks: list) -> InlineKeyboardMarkup:
     rows = [
         [
             InlineKeyboardButton(
-                text=f"{t['title']} — получить файл ещё раз 📥",
+                text=f"📥 {t['title']} · скачать ещё раз",
                 callback_data=f"redl:{t['track_id']}",
             )
         ]
@@ -43,7 +43,7 @@ async def show_purchases(callback: CallbackQuery) -> None:
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🎧 В каталог", callback_data="catalog"
+                        text="🔊 В каталог", callback_data="catalog"
                     )
                 ],
                 [InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)],
@@ -65,7 +65,7 @@ async def redeliver_track(callback: CallbackQuery) -> None:
     track = await db.get_track(track_id)
     if track is None or not track["file_id"]:
         await callback.answer(
-            "Файл этого трека ещё не загружен — скоро будет доступен 🙌",
+            "Файл этого трека ещё не загружен, скоро будет доступен 🙌",
             show_alert=True,
         )
         return
@@ -83,7 +83,7 @@ async def redeliver_track(callback: CallbackQuery) -> None:
             await callback.message.answer_document(track["file_id"])
         except TelegramAPIError:
             await callback.answer(
-                "Не удалось отправить файл — напишите в поддержку",
+                "Не удалось отправить файл. Напишите в поддержку",
                 show_alert=True,
             )
             return
