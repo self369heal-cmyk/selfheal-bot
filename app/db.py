@@ -51,6 +51,15 @@ CREATE TABLE IF NOT EXISTS inbox_map (
     admin_message_id INTEGER PRIMARY KEY,
     user_telegram_id INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS orders (
+    order_number TEXT PRIMARY KEY,
+    telegram_id  INTEGER NOT NULL,
+    track_id     INTEGER,
+    offer_id     INTEGER,
+    amount_rub   INTEGER NOT NULL DEFAULT 0,
+    created_at   TEXT NOT NULL
+);
 """
 
 
@@ -341,6 +350,96 @@ async def get_inbox_user(admin_message_id: int) -> int | None:
         )
         row = await cursor.fetchone()
         return row[0] if row else None
+
+
+async def record_order(
+    order_number: str,
+    telegram_id: int,
+    track_id: int | None,
+    offer_id: int | None,
+    amount_rub: int,
+) -> None:
+    async with _connect() as db:
+        await db.execute(
+            """
+            INSERT OR IGNORE INTO orders
+                (order_number, telegram_id, track_id, offer_id, amount_rub, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                order_number,
+                telegram_id,
+                track_id,
+                offer_id,
+                amount_rub,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        await db.commit()
+
+
+async def get_stats_overview() -> dict:
+    async with _connect() as db:
+        async def one(query: str, args: tuple = ()) -> int:
+            cursor = await db.execute(query, args)
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
+        overview = {
+            "users_total": await one("SELECT COUNT(*) FROM users"),
+            "free_only": await one(
+                """
+                SELECT COUNT(*) FROM users u
+                WHERE u.got_free_track = 1
+                  AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.telegram_id = u.telegram_id)
+                """
+            ),
+            "buyers": await one("SELECT COUNT(DISTINCT telegram_id) FROM orders"),
+            "orders_total": await one("SELECT COUNT(*) FROM orders"),
+            "revenue_total": await one("SELECT COALESCE(SUM(amount_rub),0) FROM orders"),
+            "referrals_total": await one("SELECT COUNT(*) FROM referrals"),
+            "tracks_issued": await one("SELECT COUNT(*) FROM user_tracks"),
+            "messages_total": await one("SELECT COUNT(*) FROM user_messages"),
+        }
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """
+            SELECT t.title, COUNT(o.order_number) AS cnt
+            FROM tracks t LEFT JOIN orders o ON o.track_id = t.track_id
+            GROUP BY t.track_id ORDER BY cnt DESC, t.track_id
+            """
+        )
+        rows = await cursor.fetchall()
+        overview["top_tracks"] = rows[:3]
+        overview["bottom_tracks"] = list(reversed(rows))[:3]
+        return overview
+
+
+async def get_daily_stats(since_iso: str) -> dict:
+    async with _connect() as db:
+        async def one(query: str, args: tuple = ()) -> int:
+            cursor = await db.execute(query, args)
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
+        return {
+            "new_users": await one(
+                "SELECT COUNT(*) FROM users WHERE registered_at >= ?", (since_iso,)
+            ),
+            "orders": await one(
+                "SELECT COUNT(*) FROM orders WHERE created_at >= ?", (since_iso,)
+            ),
+            "revenue": await one(
+                "SELECT COALESCE(SUM(amount_rub),0) FROM orders WHERE created_at >= ?",
+                (since_iso,),
+            ),
+            "new_referrals": await one(
+                "SELECT COUNT(*) FROM referrals WHERE created_at >= ?", (since_iso,)
+            ),
+            "new_messages": await one(
+                "SELECT COUNT(*) FROM user_messages WHERE created_at >= ?", (since_iso,)
+            ),
+        }
 
 
 async def count_referrals(referrer_id: int) -> int:

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from aiogram.exceptions import TelegramAPIError
@@ -6,6 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from app import db
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +167,14 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
             )
 
     await db.add_user_track(telegram_id, track["track_id"])
+    order_number = str(_pick(payload, ("order_number", "order_id", "deal_id")) or "")
+    await db.record_order(
+        order_number or f"auto-{telegram_id}-{track['track_id']}-{int(datetime.now(timezone.utc).timestamp())}",
+        telegram_id,
+        track["track_id"],
+        offer_id,
+        settings.track_price_rub,
+    )
     try:
         from app.handlers.referral import PURCHASES_BUTTON_TEXT
         from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
