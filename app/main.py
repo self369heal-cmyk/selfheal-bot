@@ -57,11 +57,17 @@ async def lifespan(app: FastAPI):
                 "WEBHOOK_BASE_URL is not set — "
                 "Telegram webhook was not registered"
             )
+        from app.handlers.stats import start_digest_task
+
+        app.state.digest_task = start_digest_task(bot)
     else:
         logger.warning("BOT_TOKEN is not set — Telegram bot is disabled")
 
     yield
 
+    digest_task = getattr(app.state, "digest_task", None)
+    if digest_task is not None:
+        digest_task.cancel()
     bot = getattr(app.state, "bot", None)
     if bot is not None:
         try:

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     webapp_port: int = 8000
     database_path: str = "selfheal.db"
     admin_telegram_id: int = 5925313775  # telegram_id администратора (команда /getfileid)
+    track_price_rub: int = 900  # цена одного трека, используется для статистики выручки
     # шаблон ссылки оплаты GetCourse: плейсхолдеры
     # {track_id}, {track_slug}, {telegram_id}, {track_title}
     # p_telegram_id заполняет скрытое поле формы, utm_term маркирует заказ
