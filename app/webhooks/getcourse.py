@@ -87,12 +87,17 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
             {"status": "error", "error": "bot_not_configured"}, status_code=503
         )
 
+    from app.handlers.referral import track_caption
+
+    caption = await track_caption(
+        bot, telegram_id, track, prefix="Спасибо за покупку 🔊\n\n"
+    )
     try:
         await bot.send_audio(
             telegram_id,
             track["file_id"],
             title=track["title"],
-            caption="Спасибо за покупку 🔊 Советы по прослушиванию в разделе «📖 Как слушать КИТ».",
+            caption=caption,
         )
     except TelegramAPIError:
         logger.exception(
@@ -101,7 +106,7 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
             track["track_id"],
         )
         try:
-            await bot.send_document(telegram_id, track["file_id"])
+            await bot.send_document(telegram_id, track["file_id"], caption=caption)
         except TelegramAPIError:
             logger.exception("sendDocument also failed for user %s", telegram_id)
             return JSONResponse(

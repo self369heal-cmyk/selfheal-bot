@@ -1,4 +1,5 @@
 import logging
+import re
 
 from aiogram import Router
 from aiogram.filters import CommandObject, CommandStart
@@ -33,14 +34,16 @@ WELCOME_TEXT = """Приветствую 🌿
 async def cmd_start(message: Message, command: CommandObject) -> None:
     telegram_id = message.from_user.id
 
+    # реф-параметр: ref<uid> или ref<uid>_track<tid> (трек, приведший человека)
     referrer_id: int | None = None
-    if command.args and command.args.startswith("ref_"):
-        try:
-            candidate = int(command.args.removeprefix("ref_"))
-        except ValueError:
-            candidate = None
-        if candidate is not None and candidate != telegram_id:
+    source_track_id: int | None = None
+    m = re.fullmatch(r"ref_?(\d+)(?:_track(\d+))?", (command.args or "").strip())
+    if m:
+        candidate = int(m.group(1))
+        if candidate != telegram_id:
             referrer_id = candidate
+            if m.group(2):
+                source_track_id = int(m.group(2))
 
     is_new = await retry_transient(lambda: get_user(telegram_id)) is None
     if is_new:
@@ -48,15 +51,17 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
         logger.info("New user registered: %s (referrer: %s)", telegram_id, referrer_id)
         if referrer_id is not None:
             await retry_transient(
-                lambda: _register_referral(message, referrer_id)
+                lambda: _register_referral(message, referrer_id, source_track_id)
             )
 
     await message.answer(WELCOME_TEXT, reply_markup=open_catalog_kb())
     await message.answer(MENU_TITLE, reply_markup=main_menu_kb())
 
 
-async def _register_referral(message: Message, referrer_id: int) -> None:
-    await add_referral(referrer_id, message.from_user.id)
+async def _register_referral(
+    message: Message, referrer_id: int, source_track_id: int | None = None
+) -> None:
+    await add_referral(referrer_id, message.from_user.id, source_track_id)
     count = await count_referrals(referrer_id)
     if count % FRIENDS_PER_BONUS != 0:
         return

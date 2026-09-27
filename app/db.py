@@ -30,9 +30,10 @@ CREATE TABLE IF NOT EXISTS user_tracks (
 );
 
 CREATE TABLE IF NOT EXISTS referrals (
-    referrer_id INTEGER NOT NULL,
-    referred_id INTEGER NOT NULL PRIMARY KEY,
-    created_at  TEXT NOT NULL
+    referrer_id      INTEGER NOT NULL,
+    referred_id      INTEGER NOT NULL PRIMARY KEY,
+    created_at       TEXT NOT NULL,
+    source_track_id  INTEGER
 );
 """
 
@@ -41,32 +42,81 @@ def _connect() -> aiosqlite.Connection:
     return aiosqlite.connect(settings.database_path)
 
 
-# (track_id, title, section, description) — раздел 1.3 документа
-TRACKS_SEED: list[tuple[int, str, str, str]] = [
-    (1, "АнтиСтресс и расслабление, покой и гармонизация", "emotions",
-     "Снимает стресс и внутреннее напряжение, возвращает покой и гармоничное состояние."),
-    (2, "Устранение любых негативных эмоций (обиды, страхи, тревожность, истерика у женщин и детей)", "emotions",
-     "Помогает отпустить обиды, страхи и тревожность; работает и с истериками у женщин и детей."),
-    (3, "Легкое засыпание и расслабление", "emotions",
-     "Мягко расслабляет и облегчает засыпание, можно слушать на ночь."),
-    (4, "Хорошее настроение и радость", "emotions",
-     "Поднимает настроение и возвращает ощущение радости и лёгкости."),
-    (5, "Концентрация, уверенность и продуктивность", "energy",
-     "Помогает собраться, усилить концентрацию, уверенность и продуктивность."),
-    (6, "Энергичность, активность и бодрость", "energy",
-     "Наполняет энергией, возвращает активность и бодрость."),
-    (7, "Деньги, изобилие, продуктивность и реализация в легкости", "energy",
-     "Настраивает на состояние изобилия: деньги, реализация и движение вперёд в лёгкости."),
-    (8, "Усиление связи с собой, Душой и Богом", "energy",
-     "Углубляет связь с собой, Душой и Богом."),
-    (9, "Здоровая спина, поясница и шея, кости и суставы", "body",
-     "Работает со спиной, поясницей и шеей; поддерживает кости и суставы."),
+# (track_id, title, section, description, file_id) — тексты и файлы утверждены заказчиком.
+# description = caption аудио: первая строка — эмодзи + короткое название, дальше тело.
+TRACKS_SEED: list[tuple[int, str, str, str, str]] = [
+    (1, "АнтиСтресс и расслабление (Покой и гармонизация нервной системы)", "emotions",
+     "😊 АнтиСтресс и расслабление\n"
+     "Этот КИТ <b>снимает стрессовые состояния</b> и психоэмоциональные переживания, "
+     "накопленные в теле. Дарит глубокое расслабление и покой, улучшает общее самочувствие.\n"
+     "Убирает резкие эмоциональные всплески, <b>расслабляет нервную и гормональную систему</b>.",
+     "CQACAgIAAxkBAANjarjsCxL7Gic-m_JvQwrals1E_vQAAlGjAAJDK8lJOmdqCBIU0sA9BA"),
+    (2, "Устранение любых негативных эмоций (Обиды, страхи, тревожность, истерика у женщин и детей)", "emotions",
+     "😭 Устранение любых негативных эмоций\n"
+     "Этот КИТ помогает <b>растворить любые негативные эмоции</b>: обиды, страхи, тревожность, "
+     "истерики. Слушайте от 4 минут — чем дольше, тем глубже растворяются эмоции.\n"
+     "Желательно чётко осознавать, какую эмоцию хотите отпустить, но <b>не фокусироваться на ней "
+     "навязчиво</b> — она сама постепенно уйдёт.",
+     "CQACAgIAAxkBAANlarjsglEHX65JfLQ3uF79H3txkHQAAlqjAAJDK8lJrZnUr8AtjsY9BA"),
+    (3, "Для хорошего сна и быстрого засыпания (От бессонницы)", "emotions",
+     "😴 Для хорошего сна и быстрого засыпания\n"
+     "Этот КИТ помогает <b>легко и быстро уснуть</b>. Включите и слушайте, пока не заснёте — "
+     "можно один раз, а можно оставить на всю ночь. Улучшает засыпание и качество сна. 💤",
+     "CQACAgIAAxkBAANnarjsyN6PEklbaKvHCEDChLjqV7EAAl-jAAJDK8lJ0VvrMj6UtWs9BA"),
+    (4, "Хорошее настроение, радость и активность", "emotions",
+     "🤗 Хорошее настроение, радость и активность\n"
+     "Этот КИТ <b>улучшает самочувствие</b> и синхронизирует работу гормональной системы — "
+     "гипофиз, щитовидную железу, надпочечники, репродуктивную систему.\n"
+     "Дарит <b>ясность, бодрость и активность</b>, улучшает работу мозга и нервной системы. 🌞",
+     "CQACAgIAAxkBAANparjs8vbwlvXHDehSHD9JiyZIuH4AAmejAAJDK8lJ_YYTDqh4Grg9BA"),
+    (5, "Концентрация, активация и продуктивность", "energy",
+     "🥇 Концентрация, активация и продуктивность\n"
+     "Этот КИТ <b>активирует внутренние ресурсы</b>, включает мотивацию, вдохновение и желание "
+     "творить и действовать. Помогает услышать себя и свою миссию.\n"
+     "Усиливает <b>концентрацию и уверенность в себе</b>, даёт ясность. 🎯",
+     "CQACAgIAAxkBAANrarjtHaDuQR66eshguAoklH9J9CYAAm-jAAJDK8lJ8oAtbsQwnP09BA"),
+    (6, "Энергичность, активация силы и бодрости", "energy",
+     "⚡ Энергичность, активация силы и бодрости\n"
+     "Этот КИТ <b>включает состояние энергичности</b>, активирует силы и бодрость, разогревает "
+     "мышцы и ресурсы тела.\n"
+     "Отлично подходит <b>для спорта, тренировок и активных прогулок</b>. 💪",
+     "CQACAgIAAxkBAANtarjtPlQsZjkP-ftOR6Q0-rZOJKsAAnOjAAJDK8lJsiddcQ8E6Vk9BA"),
+    (7, "Деньги, изобилие и материализация", "energy",
+     "💰 Деньги, изобилие и материализация\n"
+     "Этот КИТ <b>усиливает материализацию</b> и помогает войти в состояние изобилия. "
+     "Улучшает отношения с деньгами.\n"
+     "Включает состояние <b>притяжения денег</b> и заземления. 🌍",
+     "CQACAgIAAxkBAANvarjtYQ568GEwLUrQKnEKvJ_GMFsAAnSjAAJDK8lJMHZp5EWwxDI9BA"),
+    (8, "Усиление связи с Душой и Богом", "energy",
+     "🙏 Усиление связи с Душой и Богом\n"
+     "Этот КИТ усиливает <b>связь с душой и Богом</b>. В нём собраны разные медитативные "
+     "состояния, которые помогают настроиться на свой духовный центр.\n"
+     "Помогает войти в <b>состояние тишины</b> и божественного потока.",
+     "CQACAgIAAxkBAANxarjthXvkjqvyw_TqLrF_0LQ1r0gAAnajAAJDK8lJRzpnKWgUquc9BA"),
+    (9, "Здоровая спина, поясница, шея и позвоночник", "body",
+     "💃 Здоровая спина, поясница, шея и позвоночник\n"
+     "В этот КИТ вшиты <b>коды исцеления для тела</b>: спины, поясницы, шеи, костей, суставов "
+     "и всего позвоночника.\n"
+     "Помогает мочеполовой и репродуктивной системе, расслабляет оболочки спинного и головного "
+     "мозга — <b>исцеляет то, что чаще всего болит</b>.",
+     "CQACAgIAAxkBAANzarjttfeKznGaiYLu0-M0zv7N2AYAAnmjAAJDK8lJXDGSAV9DyXE9BA"),
     (10, "Здоровая голова и ясность мышления", "body",
-     "Заботится о здоровье головы и возвращает ясность мышления."),
+     "🧠 Здоровая голова и ясность мышления\n"
+     "Этот КИТ <b>убирает головные боли</b> и включает ясность в голове. Расслабляет оболочки "
+     "мозга и улучшает циркуляцию спинномозговой жидкости.\n"
+     "Добавляет больше <b>тишины и ясности мышления</b>.",
+     "CQACAgIAAxkBAAN1arjt1JrE_b-XVqLJLT7UI6u7ZJ0AAnyjAAJDK8lJ3oCS7Ld6tPI9BA"),
     (11, "Здоровое пищеварение (ЖКТ)", "body",
-     "Гармонизирует работу желудочно-кишечного тракта."),
+     "🍇 Здоровое пищеварение (ЖКТ)\n"
+     "Этот КИТ <b>улучшает работу органов ЖКТ</b> — кишечника, печени, поджелудочной железы "
+     "и желудка.\n"
+     "Гармонизирует все функции желудочно-кишечного тракта.",
+     "CQACAgIAAxkBAAN3arjt_EeCc5zBSwABWUG-UQMURBaAAAKAowACQyvJSccq45m5lJcuPQQ"),
     (12, "Сильный иммунитет", "body",
-     "Поддерживает и укрепляет иммунитет."),
+     "🛡️ Сильный иммунитет\n"
+     "Этот КИТ помогает <b>быстрее оздоровиться</b> и включает иммунитет на полную мощность.\n"
+     "Усиливает <b>защитные функции организма</b>.",
+     "CQACAgIAAxkBAAN5arjuEjM_Pr_WHIEb6Wcu4BV-x8IAAoKjAAJDK8lJyHwjUz_ud209BA"),
 ]
 
 
@@ -86,10 +136,21 @@ async def init_db() -> None:
             )
         if "duration_min" in columns:
             await db.execute("ALTER TABLE tracks DROP COLUMN duration_min")
+        cursor = await db.execute("PRAGMA table_info(referrals)")
+        referral_columns = {row[1] for row in await cursor.fetchall()}
+        if "source_track_id" not in referral_columns:
+            await db.execute(
+                "ALTER TABLE referrals ADD COLUMN source_track_id INTEGER"
+            )
         await db.executemany(
             """
-            INSERT OR IGNORE INTO tracks (track_id, title, section, description)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO tracks (track_id, title, section, description, file_id)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(track_id) DO UPDATE SET
+                title = excluded.title,
+                section = excluded.section,
+                description = excluded.description,
+                file_id = excluded.file_id
             """,
             TRACKS_SEED,
         )
@@ -195,14 +256,21 @@ async def mark_got_free_track(telegram_id: int) -> None:
         await db.commit()
 
 
-async def add_referral(referrer_id: int, referred_id: int) -> None:
+async def add_referral(
+    referrer_id: int, referred_id: int, source_track_id: int | None = None
+) -> None:
     async with _connect() as db:
         await db.execute(
             """
-            INSERT OR IGNORE INTO referrals (referrer_id, referred_id, created_at)
-            VALUES (?, ?, ?)
+            INSERT OR IGNORE INTO referrals (referrer_id, referred_id, created_at, source_track_id)
+            VALUES (?, ?, ?, ?)
             """,
-            (referrer_id, referred_id, datetime.now(timezone.utc).isoformat()),
+            (
+                referrer_id,
+                referred_id,
+                datetime.now(timezone.utc).isoformat(),
+                source_track_id,
+            ),
         )
         await db.commit()
 
