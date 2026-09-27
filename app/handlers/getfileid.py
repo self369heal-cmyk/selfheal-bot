@@ -30,10 +30,8 @@ async def cmd_getfileid(message: Message) -> None:
     await message.answer(HELP_TEXT)
 
 
-@router.message(F.audio | F.document)
+@router.message(F.audio | F.document, F.from_user.id == settings.admin_telegram_id)
 async def send_file_id(message: Message) -> None:
-    if not _is_admin(message):
-        return
     attachment = message.audio or message.document
     name = (
         getattr(attachment, "file_name", None)
