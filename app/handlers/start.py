@@ -5,7 +5,6 @@ from aiogram.filters import CommandObject, CommandStart
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from app import texts
 from app.db import add_referral, count_referrals, create_user, get_user
 from app.handlers.referral import BONUS_NOTIFY_TEXT, FRIENDS_PER_BONUS
 from app.keyboards import MENU_TITLE, main_menu_kb, open_catalog_kb
@@ -53,8 +52,6 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
             )
 
     await message.answer(WELCOME_TEXT, reply_markup=open_catalog_kb())
-    if is_new:
-        await message.answer(texts.DISCLAIMER)
     await message.answer(MENU_TITLE, reply_markup=main_menu_kb())
 
 
