@@ -94,7 +94,6 @@ async def send_track(message, telegram_id: int, track) -> None:
         track["file_id"],
         title=track["title"],
         caption=await track_caption(message.bot, telegram_id, track),
-        protect_content=True,
     )
     await message.answer(
         "Все ваши треки — в разделе «Мои покупки».",

@@ -74,7 +74,6 @@ async def redeliver_track(callback: CallbackQuery) -> None:
     try:
         await callback.message.answer_audio(
             track["file_id"], title=track["title"], caption=caption,
-            protect_content=True,
         )
     except TelegramAPIError:
         logger.exception(
@@ -84,7 +83,7 @@ async def redeliver_track(callback: CallbackQuery) -> None:
         )
         try:
             await callback.message.answer_document(
-                track["file_id"], caption=caption, protect_content=True
+                track["file_id"], caption=caption,
             )
         except TelegramAPIError:
             await callback.answer(
