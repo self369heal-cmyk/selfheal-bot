@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 HELP_TEXT = (
-    "Отправьте в этот чат аудио или файл с треком. "
-    "Я отвечу его file_id для записи в таблицу tracks."
+    "Отправьте в этот чат видео, аудио или файл. "
+    "Я отвечу его file_id для записи в каталог."
 )
 
 
@@ -30,9 +30,14 @@ async def cmd_getfileid(message: Message) -> None:
     await message.answer(HELP_TEXT)
 
 
-@router.message(F.audio | F.document, F.from_user.id == settings.admin_telegram_id)
+@router.message(
+    F.audio | F.document | F.video | F.voice,
+    F.from_user.id == settings.admin_telegram_id,
+)
 async def send_file_id(message: Message) -> None:
-    attachment = message.audio or message.document
+    attachment = (
+        message.audio or message.document or message.video or message.voice
+    )
     name = (
         getattr(attachment, "file_name", None)
         or getattr(attachment, "title", None)

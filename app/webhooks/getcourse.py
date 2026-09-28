@@ -109,40 +109,70 @@ async def _deliver_meditation(
         med["price"],
     )
 
-    if med["file_id"]:
-        caption = f"Спасибо за покупку! Ваша видео-медитация:\n\n🎬 <b>{med['title']}</b>"
-        try:
-            await bot.send_video(telegram_id, med["file_id"], caption=caption)
-        except TelegramAPIError:
-            logger.exception(
-                "sendVideo failed for user %s meditation %s — trying sendDocument",
-                telegram_id,
-                med["med_id"],
-            )
+    if med["file_id"] or med["audio_id"]:
+        await bot.send_message(
+            telegram_id,
+            f"Спасибо за покупку! Ваша медитация «{med['title']}» — "
+            "видео и аудиоверсия ниже 🎬🎧",
+        )
+        caption = f"🎬 <b>{med['title']}</b>"
+        audio_caption = f"🎧 <b>{med['title']}</b> — аудиоверсия"
+        failed = False
+        if med["file_id"]:
             try:
-                await bot.send_document(
-                    telegram_id, med["file_id"], caption=caption,
+                await bot.send_video(telegram_id, med["file_id"], caption=caption)
+            except TelegramAPIError:
+                logger.exception(
+                    "sendVideo failed for user %s meditation %s — trying sendDocument",
+                    telegram_id,
+                    med["med_id"],
+                )
+                try:
+                    await bot.send_document(
+                        telegram_id, med["file_id"], caption=caption,
+                    )
+                except TelegramAPIError:
+                    logger.exception(
+                        "sendDocument also failed for user %s", telegram_id
+                    )
+                    failed = True
+        if med["audio_id"]:
+            try:
+                await bot.send_audio(
+                    telegram_id, med["audio_id"], caption=audio_caption
                 )
             except TelegramAPIError:
                 logger.exception(
-                    "sendDocument also failed for user %s", telegram_id
+                    "sendAudio failed for user %s meditation %s — trying sendDocument",
+                    telegram_id,
+                    med["med_id"],
                 )
-                return JSONResponse(
-                    {"status": "error", "error": "delivery_failed"},
-                    status_code=502,
-                )
+                try:
+                    await bot.send_document(
+                        telegram_id, med["audio_id"], caption=audio_caption,
+                    )
+                except TelegramAPIError:
+                    logger.exception(
+                        "sendDocument also failed for user %s", telegram_id
+                    )
+                    failed = True
+        if failed:
+            return JSONResponse(
+                {"status": "error", "error": "delivery_failed"},
+                status_code=502,
+            )
     else:
         await bot.send_message(
             telegram_id,
-            f"Спасибо за покупку! Видео-медитация «{med['title']}» скоро придёт — "
-            "пришлём её вам в этом чате 🙌",
+            f"Спасибо за покупку! Медитация «{med['title']}» скоро придёт — "
+            "пришлём видео и аудио вам в этом чате 🙌",
         )
         try:
             await bot.send_message(
                 settings.admin_telegram_id,
                 f"💳 Покупка медитации «{med['title']}» ({med['price']} ₽) "
-                f"от пользователя {telegram_id} — видео ещё не загружено, "
-                "нужен file_id.",
+                f"от пользователя {telegram_id} — файлы ещё не загружены, "
+                "нужны file_id.",
             )
         except TelegramAPIError:
             logger.exception("admin notify failed for meditation purchase")

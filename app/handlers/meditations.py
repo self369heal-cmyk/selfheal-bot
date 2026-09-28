@@ -58,7 +58,7 @@ def med_card_text(med: dict, owned: bool) -> str:
 def med_card_kb(med: dict, owned: bool, telegram_id: int) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     if owned:
-        if med["file_id"]:
+        if med["file_id"] or med["audio_id"]:
             rows.append(
                 [
                     InlineKeyboardButton(
@@ -133,26 +133,47 @@ async def redeliver_meditation(callback: CallbackQuery) -> None:
         await callback.answer("Эта медитация у вас не найдена", show_alert=True)
         return
     med = get_meditation(med_id)
-    if med is None or not med["file_id"]:
+    if med is None or not (med["file_id"] or med["audio_id"]):
         await callback.answer(
-            "Видео ещё загружается, скоро будет доступно 🙌",
+            "Файлы ещё загружаются, скоро будут доступны 🙌",
             show_alert=True,
         )
         return
     caption = f"🎬 <b>{med['title']}</b>"
-    try:
-        await callback.message.answer_video(med["file_id"], caption=caption)
-    except TelegramAPIError:
-        logger.exception(
-            "Redelivery failed for user %s meditation %s",
-            callback.from_user.id,
-            med_id,
-        )
+    audio_caption = f"🎧 <b>{med['title']}</b> — аудиоверсия"
+    ok = True
+    if med["file_id"]:
         try:
-            await callback.message.answer_document(med["file_id"], caption=caption)
+            await callback.message.answer_video(med["file_id"], caption=caption)
         except TelegramAPIError:
-            await callback.answer(
-                "Не удалось отправить видео. Напишите в поддержку",
-                show_alert=True,
+            logger.exception(
+                "Redelivery video failed for user %s meditation %s",
+                callback.from_user.id,
+                med_id,
             )
-            return
+            try:
+                await callback.message.answer_document(
+                    med["file_id"], caption=caption
+                )
+            except TelegramAPIError:
+                ok = False
+    if med["audio_id"]:
+        try:
+            await callback.message.answer_audio(med["audio_id"], caption=audio_caption)
+        except TelegramAPIError:
+            logger.exception(
+                "Redelivery audio failed for user %s meditation %s",
+                callback.from_user.id,
+                med_id,
+            )
+            try:
+                await callback.message.answer_document(
+                    med["audio_id"], caption=audio_caption
+                )
+            except TelegramAPIError:
+                ok = False
+    if not ok:
+        await callback.answer(
+            "Не удалось отправить часть файлов. Напишите в поддержку",
+            show_alert=True,
+        )
