@@ -11,18 +11,19 @@ from aiogram.types import (
 from app import db
 from app.handlers.referral import PURCHASES_BUTTON_TEXT, track_caption
 from app.keyboards import BACK_LABEL, CB_MENU
+from app.meditations import get_meditation
 
 logger = logging.getLogger(__name__)
 
 router = Router()
 
-PURCHASES_TITLE = "Вот все треки, которые у вас уже есть 🔊"
+PURCHASES_TITLE = "Вот все треки и медитации, которые у вас уже есть 🔊🎬"
 PURCHASES_EMPTY = (
     "У вас пока нет треков.\n\nЗагляните в каталог: <b>первый трек в подарок 🎁</b>"
 )
 
 
-def purchases_kb(tracks: list) -> InlineKeyboardMarkup:
+def purchases_kb(tracks: list, med_ids: list[int]) -> InlineKeyboardMarkup:
     rows = [
         [
             InlineKeyboardButton(
@@ -32,6 +33,18 @@ def purchases_kb(tracks: list) -> InlineKeyboardMarkup:
         ]
         for t in tracks
     ]
+    for med_id in med_ids:
+        med = get_meditation(med_id)
+        if med is None:
+            continue
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=f"▶️ {med['button']} · смотреть",
+                    callback_data=f"redm:{med_id}",
+                )
+            ]
+        )
     rows.append([InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -39,7 +52,8 @@ def purchases_kb(tracks: list) -> InlineKeyboardMarkup:
 @router.callback_query(F.data == "purchases")
 async def show_purchases(callback: CallbackQuery) -> None:
     tracks = await db.get_user_tracks(callback.from_user.id)
-    if not tracks:
+    med_ids = [row["med_id"] for row in await db.get_user_meditations(callback.from_user.id)]
+    if not tracks and not med_ids:
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
@@ -53,7 +67,7 @@ async def show_purchases(callback: CallbackQuery) -> None:
         await callback.message.edit_text(PURCHASES_EMPTY, reply_markup=kb)
         return
     await callback.message.edit_text(
-        PURCHASES_TITLE, reply_markup=purchases_kb(tracks)
+        PURCHASES_TITLE, reply_markup=purchases_kb(tracks, med_ids)
     )
 
 
