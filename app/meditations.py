@@ -9,8 +9,8 @@ file_id — id видео в Telegram, audio_id — id аудиоверсии: �
 MEDITATIONS: list[dict] = [
     {
         "med_id": 1,
-        "button": "Счастье в теле",
-        "title": "Медитация «Счастье в теле»",
+        "button": "Легкое включение счастья в теле",
+        "title": "Практика «Легкое включение счастья в теле»",
         "price": 900,
         "offer_id": 8476167,
         "pay_slug": "page64",
