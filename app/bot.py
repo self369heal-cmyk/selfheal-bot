@@ -13,6 +13,7 @@ from app.handlers import (
     catalog,
     getfileid,
     inbox,
+    meditations,
     menu,
     purchases,
     referral,
@@ -54,6 +55,7 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(catalog.router)
     dp.include_router(referral.router)
     dp.include_router(purchases.router)
+    dp.include_router(meditations.router)
     dp.include_router(menu.router)
     dp.include_router(getfileid.router)
     dp.include_router(backupdb.router)

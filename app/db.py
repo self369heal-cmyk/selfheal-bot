@@ -60,6 +60,13 @@ CREATE TABLE IF NOT EXISTS orders (
     amount_rub   INTEGER NOT NULL DEFAULT 0,
     created_at   TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS user_meditations (
+    user_id     INTEGER NOT NULL,
+    med_id      INTEGER NOT NULL,
+    received_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, med_id)
+);
 """
 
 
@@ -276,6 +283,40 @@ async def add_user_track(user_id: int, track_id: int) -> None:
             (user_id, track_id, datetime.now(timezone.utc).isoformat()),
         )
         await db.commit()
+
+
+async def user_has_meditation(user_id: int, med_id: int) -> bool:
+    async with _connect() as db:
+        cursor = await db.execute(
+            "SELECT 1 FROM user_meditations WHERE user_id = ? AND med_id = ?",
+            (user_id, med_id),
+        )
+        return await cursor.fetchone() is not None
+
+
+async def add_user_meditation(user_id: int, med_id: int) -> None:
+    async with _connect() as db:
+        await db.execute(
+            """
+            INSERT OR IGNORE INTO user_meditations (user_id, med_id, received_at)
+            VALUES (?, ?, ?)
+            """,
+            (user_id, med_id, datetime.now(timezone.utc).isoformat()),
+        )
+        await db.commit()
+
+
+async def get_user_meditations(user_id: int) -> list[aiosqlite.Row]:
+    async with _connect() as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """
+            SELECT med_id, received_at FROM user_meditations
+            WHERE user_id = ? ORDER BY received_at
+            """,
+            (user_id,),
+        )
+        return await cursor.fetchall()
 
 
 async def mark_got_free_track(telegram_id: int) -> None:

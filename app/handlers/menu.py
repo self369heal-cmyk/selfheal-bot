@@ -2,17 +2,11 @@ import logging
 
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Message,
-)
+from aiogram.types import CallbackQuery, Message
 
 from app import texts
 from app.retry import TRANSIENT_ERRORS, retry_transient
 from app.keyboards import (
-    BACK_LABEL,
     CB_MENU,
     MENU_TITLE,
     back_to_menu_kb,
@@ -70,16 +64,4 @@ async def show_author(callback: CallbackQuery) -> None:
         logger.exception("failed to resend menu after author screen")
 
 
-@router.callback_query(F.data == "video")
-async def show_video(callback: CallbackQuery) -> None:
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Перейти на сайт ▶️", url=texts.VIDEO_URL
-                )
-            ],
-            [InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)],
-        ]
-    )
-    await callback.message.edit_text(texts.VIDEO, reply_markup=kb)
+# «video» обрабатывает app.handlers.meditations — там каталог из 5 медитаций
