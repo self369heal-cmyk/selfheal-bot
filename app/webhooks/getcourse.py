@@ -72,8 +72,9 @@ async def _collect_payload(request: Request) -> dict:
     return payload
 
 
-def _extract_offer(raw: Any) -> tuple[str, int] | None:
-    """{object.offers} как '8759153' или '8759153,8759154' -> ('track'|'med', id)."""
+def _extract_offer(raw: Any) -> tuple[str, int, int] | None:
+    """{object.offers} как '8759153' или '8759153,8759154'
+    -> ('track'|'med', id продукта в каталоге, id оффера GetCourse)."""
     if raw is None:
         return None
     for part in str(raw).replace(";", ",").split(","):
@@ -81,9 +82,9 @@ def _extract_offer(raw: Any) -> tuple[str, int] | None:
         if part.isdigit():
             oid = int(part)
             if oid in OFFER_ID_TO_TRACK_ID:
-                return ("track", OFFER_ID_TO_TRACK_ID[oid])
+                return ("track", OFFER_ID_TO_TRACK_ID[oid], oid)
             if oid in OFFER_ID_TO_MED_ID:
-                return ("med", OFFER_ID_TO_MED_ID[oid])
+                return ("med", OFFER_ID_TO_MED_ID[oid], oid)
     return None
 
 
@@ -272,7 +273,7 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
         order_number or f"auto-{telegram_id}-{track['track_id']}-{int(datetime.now(timezone.utc).timestamp())}",
         telegram_id,
         track["track_id"],
-        offer[1] if offer else None,
+        offer[2] if offer else None,
         settings.track_price_rub,
     )
     try:
