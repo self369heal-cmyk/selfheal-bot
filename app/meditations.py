@@ -14,6 +14,8 @@ MEDITATIONS: list[dict] = [
         "price": 900,
         "offer_id": 8476167,
         "pay_slug": "page64",
+        "file_id": "BAACAgIAAxkBAAIDomq6Tlqp_FaBTKxQNcyKWzBy4nMMAAJQpwACAR2ISadtWJ3C0S1oPQQ",
+        "audio_id": "CQACAgIAAxkBAAIDo2q6TlpxCnQvmFx0quZlAAGdtGT8ugACUacAAgEdiEnlqSDsg2jHuT0E",
         "image": (
             "https://fs-thb02.getcourse.ru/fileservice/file/thumbnail/h/"
             "4e9569ae01c41b7f413202bdde7bb887.jpg/s/s1200x/a/614413/sc/193"
@@ -34,8 +36,6 @@ MEDITATIONS: list[dict] = [
             "И ему можно научить своё тело.\n\n"
             "Одна практика — и ты вспомнишь, каково это."
         ),
-        "file_id": None,
-        "audio_id": None,
     },
     {
         "med_id": 2,
@@ -44,6 +44,8 @@ MEDITATIONS: list[dict] = [
         "price": 500,
         "offer_id": 8476247,
         "pay_slug": "page65",
+        "file_id": "BQACAgIAAxkBAAIDpGq6Tlpc6_ksQ_r8s5zgLfJTZJl5AAJWpwACAR2ISUChbLlSBcm8PQQ",
+        "audio_id": "CQACAgIAAxkBAAIDpWq6TloeM6UXzp_ndykmK83fQn_1AAJYpwACAR2ISTS90sA6s6jxPQQ",
         "image": (
             "https://fs-thb02.getcourse.ru/fileservice/file/thumbnail/h/"
             "e0990831a6c362b5fb6405c5e45d4847.jpg/s/s1200x/a/614413/sc/55"
@@ -60,8 +62,6 @@ MEDITATIONS: list[dict] = [
             "не с усилием воли, а с физиологией.\n\n"
             "10 минут — и ты в другом состоянии."
         ),
-        "file_id": None,
-        "audio_id": None,
     },
     {
         "med_id": 3,
@@ -70,6 +70,8 @@ MEDITATIONS: list[dict] = [
         "price": 500,
         "offer_id": 8476264,
         "pay_slug": "page66",
+        "file_id": "BAACAgIAAxkBAAIDpmq6TlpaxTh0EVlVDYF3Y9jbjIlEAAJfpwACAR2ISdM5IqQJHFRSPQQ",
+        "audio_id": "CQACAgIAAxkBAAIDp2q6Tlqx4QeHHi1O2UvBzPRNGBV9AAJgpwACAR2ISZGIkuarpY_cPQQ",
         "image": (
             "https://fs-thb03.getcourse.ru/fileservice/file/thumbnail/h/"
             "e484b3f0186e84273167a55dfabe06d8.jpg/s/s1200x/a/614413/sc/153"
@@ -86,8 +88,6 @@ MEDITATIONS: list[dict] = [
             "и нужное состояние.\n\n"
             "6 минут — и ты почувствуешь разницу."
         ),
-        "file_id": None,
-        "audio_id": None,
     },
     {
         "med_id": 4,
@@ -96,6 +96,8 @@ MEDITATIONS: list[dict] = [
         "price": 1500,
         "offer_id": 8476272,
         "pay_slug": "page67",
+        "file_id": "BAACAgIAAxkBAAIDqGq6TlpUqIgzOk6nF6aK0s1jVQECAAJppwACAR2ISV7X09hJ11W8PQQ",
+        "audio_id": "CQACAgIAAxkBAAIDqWq6Tlrq0rWnRVaf-tjoEtAHOi9PAAJqpwACAR2ISSYinhiCzKGBPQQ",
         "image": (
             "https://fs-thb01.getcourse.ru/fileservice/file/thumbnail/h/"
             "caac4aedac95c7959dd13cdecec345bf.jpg/s/s1200x/a/614413/sc/64"
@@ -117,8 +119,6 @@ MEDITATIONS: list[dict] = [
             "Медитируй раз в несколько дней — и замечай, как жизнь начинает "
             "разворачиваться навстречу тому, что ты видел внутри."
         ),
-        "file_id": None,
-        "audio_id": None,
     },
     {
         "med_id": 5,
@@ -127,6 +127,8 @@ MEDITATIONS: list[dict] = [
         "price": 300,
         "offer_id": 8476286,
         "pay_slug": "page68",
+        "file_id": "BAACAgIAAxkBAAIDqmq6Tlrd6_2fv-Dz4Ve8kKekUZu4AAJspwACAR2ISWTAFAL9-N7dPQQ",
+        "audio_id": "CQACAgIAAxkBAAIDq2q6TlrCqgABjWaZMPUWQBtpKwvOSAACbacAAgEdiElRNyep7Ri-Tz0E",
         "image": (
             "https://fs-thb02.getcourse.ru/fileservice/file/thumbnail/h/"
             "98f8f3df3082b5d2505b167d50e4b120.jpg/s/s1200x/a/614413/sc/93"
@@ -143,8 +145,6 @@ MEDITATIONS: list[dict] = [
             "Ты просто приносишь своё — и поле делает остальное.\n\n"
             "Войди. Отпусти. Выйди другой."
         ),
-        "file_id": None,
-        "audio_id": None,
     },
 ]
 
