@@ -457,7 +457,21 @@ async def get_stats_overview() -> dict:
             "orders_total": await one("SELECT COUNT(*) FROM orders"),
             "revenue_total": await one("SELECT COALESCE(SUM(amount_rub),0) FROM orders"),
             "referrals_total": await one("SELECT COUNT(*) FROM referrals"),
+            "ref_buyers": await one(
+                """
+                SELECT COUNT(*) FROM referrals r
+                WHERE EXISTS (
+                    SELECT 1 FROM orders o WHERE o.telegram_id = r.referred_id
+                )
+                """
+            ),
             "tracks_issued": await one("SELECT COUNT(*) FROM user_tracks"),
+            "purchases_total": await one(
+                """
+                SELECT COUNT(*) FROM orders
+                WHERE track_id IS NOT NULL OR offer_id IS NOT NULL
+                """
+            ),
             "messages_total": await one("SELECT COUNT(*) FROM user_messages"),
         }
         db.row_factory = aiosqlite.Row
@@ -470,7 +484,30 @@ async def get_stats_overview() -> dict:
         )
         rows = await cursor.fetchall()
         overview["top_tracks"] = rows[:3]
-        overview["bottom_tracks"] = list(reversed(rows))[:3]
+        # полный рейтинг по выдаче: треки из user_tracks, медитации из user_meditations
+        cursor = await db.execute(
+            """
+            SELECT t.title, COUNT(ut.track_id) AS cnt
+            FROM tracks t LEFT JOIN user_tracks ut ON ut.track_id = t.track_id
+            GROUP BY t.track_id ORDER BY cnt DESC, t.track_id
+            """
+        )
+        overview["track_issue_rank"] = await cursor.fetchall()
+        cursor = await db.execute(
+            "SELECT med_id, COUNT(*) AS cnt FROM user_meditations GROUP BY med_id"
+        )
+        overview["med_issue_counts"] = {
+            r["med_id"]: r["cnt"] for r in await cursor.fetchall()
+        }
+        # какие треки чаще пересылают: приход по ссылке с параметром _track<id>
+        cursor = await db.execute(
+            """
+            SELECT t.title, COUNT(r.referred_id) AS cnt
+            FROM referrals r JOIN tracks t ON t.track_id = r.source_track_id
+            GROUP BY r.source_track_id ORDER BY cnt DESC, t.track_id
+            """
+        )
+        overview["track_magnets"] = await cursor.fetchall()
         return overview
 
 
