@@ -12,6 +12,10 @@ router = Router()
 
 ACK_TEXT = "✅ Ваше сообщение передано. Ответ придёт здесь, в боте."
 
+# telegram_id пользователей, нажавших «💬 Написать отзыв» — их следующее
+# свободное сообщение помечается отзывом, флаг снимается после пересылки
+AWAITING_REVIEW: set[int] = set()
+
 
 def _is_admin(message: Message) -> bool:
     return (
@@ -54,9 +58,12 @@ async def forward_to_admin(message: Message, bot: Bot) -> None:
         text=message.text or message.caption,
         message_id=message.message_id,
     )
+    is_review = user.id in AWAITING_REVIEW
+    AWAITING_REVIEW.discard(user.id)
     username = f"@{user.username}" if user.username else "без username"
+    prefix = "💬 Отзыв" if is_review else "✉️ Сообщение"
     header = (
-        f"✉️ Сообщение от {user.full_name} ({username}, id <code>{user.id}</code>).\n"
+        f"{prefix} от {user.full_name} ({username}, id <code>{user.id}</code>).\n"
         "Ответьте на это сообщение реплаем — ответ уйдёт пользователю."
     )
     try:

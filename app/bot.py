@@ -17,6 +17,7 @@ from app.handlers import (
     menu,
     purchases,
     referral,
+    replykb,
     start,
     stats,
 )
@@ -60,6 +61,8 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(getfileid.router)
     dp.include_router(backupdb.router)
     dp.include_router(stats.router)
+    # reply-кнопки до catch-all: иначе их тексты улетают админу
+    dp.include_router(replykb.router)
     # catch-all последним: всё, что не съели остальные роутеры, уходит админу
     dp.include_router(inbox.router)
     return dp

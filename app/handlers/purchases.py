@@ -49,10 +49,11 @@ def purchases_kb(tracks: list, med_ids: list[int]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-@router.callback_query(F.data == "purchases")
-async def show_purchases(callback: CallbackQuery) -> None:
-    tracks = await db.get_user_tracks(callback.from_user.id)
-    med_ids = [row["med_id"] for row in await db.get_user_meditations(callback.from_user.id)]
+async def purchases_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
+    """Текст + клавиатура раздела «Мои покупки» — общий рендер для
+    inline-коллбека и reply-кнопки."""
+    tracks = await db.get_user_tracks(telegram_id)
+    med_ids = [row["med_id"] for row in await db.get_user_meditations(telegram_id)]
     if not tracks and not med_ids:
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
@@ -64,11 +65,14 @@ async def show_purchases(callback: CallbackQuery) -> None:
                 [InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)],
             ]
         )
-        await callback.message.edit_text(PURCHASES_EMPTY, reply_markup=kb)
-        return
-    await callback.message.edit_text(
-        PURCHASES_TITLE, reply_markup=purchases_kb(tracks, med_ids)
-    )
+        return PURCHASES_EMPTY, kb
+    return PURCHASES_TITLE, purchases_kb(tracks, med_ids)
+
+
+@router.callback_query(F.data == "purchases")
+async def show_purchases(callback: CallbackQuery) -> None:
+    text, kb = await purchases_view(callback.from_user.id)
+    await callback.message.edit_text(text, reply_markup=kb)
 
 
 @router.callback_query(F.data.startswith("redl:"))

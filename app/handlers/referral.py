@@ -131,14 +131,23 @@ def referral_kb() -> InlineKeyboardMarkup:
     )
 
 
+async def referral_view(telegram_id: int, bot) -> tuple[str, InlineKeyboardMarkup]:
+    """Текст + клавиатура реф-раздела — общий рендер для inline-коллбека
+    и reply-кнопки."""
+    count = await db.count_referrals(telegram_id)
+    link = await ref_link(bot, telegram_id)
+    return (
+        REFERRAL_TEXT.format(
+            link=link, count=count, next_milestone=next_milestone(count)
+        ),
+        referral_kb(),
+    )
+
+
 @router.callback_query(F.data == "referral")
 async def show_referral(callback: CallbackQuery) -> None:
-    count = await db.count_referrals(callback.from_user.id)
-    link = await ref_link(callback.bot, callback.from_user.id)
-    await callback.message.edit_text(
-        REFERRAL_TEXT.format(link=link, count=count, next_milestone=next_milestone(count)),
-        reply_markup=referral_kb(),
-    )
+    text, kb = await referral_view(callback.from_user.id, callback.bot)
+    await callback.message.edit_text(text, reply_markup=kb)
 
 
 @router.callback_query(F.data == "copy_ref_link")

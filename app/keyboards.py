@@ -1,6 +1,11 @@
 from urllib.parse import quote
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 
 from app.texts import VLADEMIR_URL
 
@@ -46,6 +51,27 @@ def back_to_menu_kb() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)]
         ]
+    )
+
+
+# закреплённая reply-клавиатура 2x2 внизу экрана — ставится один раз в /start
+BTN_PURCHASES = "🛍 Мои покупки"
+BTN_CATALOG = "📚 Каталог КИТ"
+BTN_REFERRALS = "👥 Мои рефералы"
+BTN_REVIEW = "💬 Написать отзыв"
+
+REPLY_KB_ROWS: list[list[str]] = [
+    [BTN_PURCHASES, BTN_CATALOG],
+    [BTN_REFERRALS, BTN_REVIEW],
+]
+
+
+def persistent_kb() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=t) for t in row] for row in REPLY_KB_ROWS
+        ],
+        resize_keyboard=True,
     )
 
 
