@@ -15,6 +15,7 @@ from app.handlers import (
     inbox,
     meditations,
     menu,
+    promo,
     purchases,
     referral,
     replykb,
@@ -63,6 +64,8 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(stats.router)
     # reply-кнопки до catch-all: иначе их тексты улетают админу
     dp.include_router(replykb.router)
+    # ввод промокода до catch-all: текст в режиме ожидания не уходит админу
+    dp.include_router(promo.router)
     # catch-all последним: всё, что не съели остальные роутеры, уходит админу
     dp.include_router(inbox.router)
     return dp

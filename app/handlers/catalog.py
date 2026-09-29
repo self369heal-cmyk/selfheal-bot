@@ -186,7 +186,7 @@ async def show_track(callback: CallbackQuery) -> None:
     bonus_available = False
     if user and not free_available:
         earned = await db.count_referrals(callback.from_user.id) // 3
-        bonus_available = earned > (user["bonus_claimed"] or 0)
+        bonus_available = earned + (user["promo_bonus"] or 0) > (user["bonus_claimed"] or 0)
     await callback.message.edit_text(
         track_card_text(track, free_available, owned),
         reply_markup=track_kb(
