@@ -18,8 +18,10 @@ from app.handlers.purchases import purchases_view
 from app.handlers.referral import referral_view
 from app.keyboards import (
     BTN_CATALOG,
+    BTN_CATALOG_LEGACY,
     BTN_PURCHASES,
     BTN_REFERRALS,
+    BTN_REFERRALS_LEGACY,
     BTN_REVIEW,
 )
 
@@ -36,12 +38,12 @@ async def reply_purchases(message: Message) -> None:
     await message.answer(text, reply_markup=kb)
 
 
-@router.message(F.text == BTN_CATALOG)
+@router.message(F.text.in_({BTN_CATALOG, BTN_CATALOG_LEGACY}))
 async def reply_catalog(message: Message) -> None:
     await message.answer(CATALOG_TITLE, reply_markup=catalog_kb())
 
 
-@router.message(F.text == BTN_REFERRALS)
+@router.message(F.text.in_({BTN_REFERRALS, BTN_REFERRALS_LEGACY}))
 async def reply_referrals(message: Message) -> None:
     text, kb = await referral_view(message.from_user.id, message.bot)
     await message.answer(text, reply_markup=kb)

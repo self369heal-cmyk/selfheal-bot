@@ -56,9 +56,14 @@ def back_to_menu_kb() -> InlineKeyboardMarkup:
 
 # закреплённая reply-клавиатура 2x2 внизу экрана — ставится один раз в /start
 BTN_PURCHASES = "🛍 Мои покупки"
-BTN_CATALOG = "📚 Каталог КИТ"
-BTN_REFERRALS = "👥 Мои рефералы"
+BTN_CATALOG = "🔊 Каталог КИТ"
+BTN_REFERRALS = "💌 Мои рефералы"
 BTN_REVIEW = "💬 Написать отзыв"
+
+# прежние подписи: закреплённые клавиатуры у пользователей обновляются
+# только новым сообщением — старые тексты принимаем тоже
+BTN_CATALOG_LEGACY = "📚 Каталог КИТ"
+BTN_REFERRALS_LEGACY = "👥 Мои рефералы"
 
 REPLY_KB_ROWS: list[list[str]] = [
     [BTN_PURCHASES, BTN_CATALOG],
