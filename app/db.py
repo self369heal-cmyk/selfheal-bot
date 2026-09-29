@@ -67,6 +67,20 @@ CREATE TABLE IF NOT EXISTS user_meditations (
     received_at TEXT NOT NULL,
     PRIMARY KEY (user_id, med_id)
 );
+
+CREATE TABLE IF NOT EXISTS promo_codes (
+    code       TEXT PRIMARY KEY,
+    max_uses   INTEGER,
+    used_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS promo_uses (
+    user_id INTEGER NOT NULL,
+    code    TEXT NOT NULL,
+    used_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, code)
+);
 """
 
 
@@ -170,6 +184,10 @@ async def init_db() -> None:
         if "bonus_claimed" not in user_columns:
             await db.execute(
                 "ALTER TABLE users ADD COLUMN bonus_claimed INTEGER NOT NULL DEFAULT 0"
+            )
+        if "promo_bonus" not in user_columns:
+            await db.execute(
+                "ALTER TABLE users ADD COLUMN promo_bonus INTEGER NOT NULL DEFAULT 0"
             )
         if "duration_min" in columns:
             await db.execute("ALTER TABLE tracks DROP COLUMN duration_min")
@@ -499,3 +517,75 @@ async def increment_bonus_claimed(telegram_id: int) -> None:
             (telegram_id,),
         )
         await db.commit()
+
+
+def _norm_promo(code: str) -> str:
+    return code.strip().upper()
+
+
+async def add_promo_code(code: str, max_uses: int | None = None) -> bool:
+    """Создать промокод. False — уже существует. max_uses=None = безлимит."""
+    async with _connect() as db:
+        cursor = await db.execute(
+            """
+            INSERT OR IGNORE INTO promo_codes (code, max_uses, created_at)
+            VALUES (?, ?, ?)
+            """,
+            (_norm_promo(code), max_uses, datetime.now(timezone.utc).isoformat()),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+
+async def delete_promo_code(code: str) -> bool:
+    async with _connect() as db:
+        cursor = await db.execute(
+            "DELETE FROM promo_codes WHERE code = ?", (_norm_promo(code),)
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+
+async def list_promo_codes() -> list[aiosqlite.Row]:
+    async with _connect() as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM promo_codes ORDER BY created_at"
+        )
+        return await cursor.fetchall()
+
+
+async def use_promo(user_id: int, code: str) -> bool:
+    """Погасить промокод: +1 к promo_bonus пользователя.
+    False — кода нет, лимит исчерпан или пользователь уже вводил его."""
+    normalized = _norm_promo(code)
+    async with _connect() as db:
+        cursor = await db.execute(
+            """
+            SELECT 1 FROM promo_codes
+            WHERE code = ? AND (max_uses IS NULL OR used_count < max_uses)
+            """,
+            (normalized,),
+        )
+        if await cursor.fetchone() is None:
+            return False
+        cursor = await db.execute(
+            "SELECT 1 FROM promo_uses WHERE user_id = ? AND code = ?",
+            (user_id, normalized),
+        )
+        if await cursor.fetchone() is not None:
+            return False
+        await db.execute(
+            "INSERT INTO promo_uses (user_id, code, used_at) VALUES (?, ?, ?)",
+            (user_id, normalized, datetime.now(timezone.utc).isoformat()),
+        )
+        await db.execute(
+            "UPDATE promo_codes SET used_count = used_count + 1 WHERE code = ?",
+            (normalized,),
+        )
+        await db.execute(
+            "UPDATE users SET promo_bonus = promo_bonus + 1 WHERE telegram_id = ?",
+            (user_id,),
+        )
+        await db.commit()
+        return True

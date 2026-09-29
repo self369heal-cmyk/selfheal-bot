@@ -111,7 +111,7 @@ async def bonuses_available(telegram_id: int) -> int:
     if user is None:
         return 0
     earned = await db.count_referrals(telegram_id) // FRIENDS_PER_BONUS
-    return max(0, earned - (user["bonus_claimed"] or 0))
+    return max(0, earned + (user["promo_bonus"] or 0) - (user["bonus_claimed"] or 0))
 
 
 def referral_kb() -> InlineKeyboardMarkup:
