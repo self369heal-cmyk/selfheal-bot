@@ -25,7 +25,8 @@ REFERRAL_TEXT = """Приглашайте друзей и получайте т�
 За каждые следующие 3 приглашённых друга начисляется новый бонус-трек на выбор.
 
 🔗 Ваша ссылка: {link}
-Приглашено друзей: {count} из {next_milestone}"""
+💌 Всего приглашено друзей: {count}
+Прогресс к бонус-треку: {count} из {next_milestone}"""
 
 BONUS_NOTIFY_TEXT = (
     "🎉 Отлично! Вы пригласили уже {count} друзей. "
@@ -131,14 +132,23 @@ def referral_kb() -> InlineKeyboardMarkup:
     )
 
 
+async def referral_view(telegram_id: int, bot) -> tuple[str, InlineKeyboardMarkup]:
+    """Текст + клавиатура реф-раздела — общий рендер для inline-коллбека
+    и reply-кнопки."""
+    count = await db.count_referrals(telegram_id)
+    link = await ref_link(bot, telegram_id)
+    return (
+        REFERRAL_TEXT.format(
+            link=link, count=count, next_milestone=next_milestone(count)
+        ),
+        referral_kb(),
+    )
+
+
 @router.callback_query(F.data == "referral")
 async def show_referral(callback: CallbackQuery) -> None:
-    count = await db.count_referrals(callback.from_user.id)
-    link = await ref_link(callback.bot, callback.from_user.id)
-    await callback.message.edit_text(
-        REFERRAL_TEXT.format(link=link, count=count, next_milestone=next_milestone(count)),
-        reply_markup=referral_kb(),
-    )
+    text, kb = await referral_view(callback.from_user.id, callback.bot)
+    await callback.message.edit_text(text, reply_markup=kb)
 
 
 @router.callback_query(F.data == "copy_ref_link")

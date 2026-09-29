@@ -8,7 +8,12 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from app.db import add_referral, count_referrals, create_user, get_user
 from app.handlers.referral import BONUS_NOTIFY_TEXT, FRIENDS_PER_BONUS
-from app.keyboards import MENU_TITLE, main_menu_kb, open_catalog_kb
+from app.keyboards import (
+    MENU_TITLE,
+    main_menu_kb,
+    open_catalog_kb,
+    persistent_kb,
+)
 from app.retry import retry_transient
 
 logger = logging.getLogger(__name__)
@@ -56,6 +61,8 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
 
     await message.answer(WELCOME_TEXT, reply_markup=open_catalog_kb())
     await message.answer(MENU_TITLE, reply_markup=main_menu_kb())
+    # закреплённая reply-клавиатура 2x2 внизу экрана — ставится один раз здесь
+    await message.answer("📍 Быстрые разделы:", reply_markup=persistent_kb())
 
 
 async def _register_referral(
