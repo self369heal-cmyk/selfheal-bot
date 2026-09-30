@@ -69,7 +69,7 @@ def render_stats(overview: dict) -> str:
         f"🔄 Конверсия рефералов в покупки: {conv} из {rt}{pct}\n"
         f"🧾 Заказов всего: {overview['orders_total']}\n"
         f"🛒 Покупок всего: {overview['purchases_total']}\n"
-        f"💳 Купили хотя бы один трек: {overview['buyers']}\n"
+        f"💳 Купили хотя бы один продукт: {overview['buyers']}\n"
         f"💰 Выручка всего: {overview['revenue_total']} ₽\n"
         f"✉️ Сообщений от пользователей: {overview['messages_total']}\n\n"
         f"🏆 <b>Топ-3 продаваемых (по заказам):</b>\n{_track_lines(overview['top_tracks'])}\n\n"
