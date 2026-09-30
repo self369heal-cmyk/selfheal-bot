@@ -1,31 +1,38 @@
 ---
 name: testing-telegram-webhook-bot
-description: How to end-to-end test the SelfHeal Telegram bot (aiogram 3 webhooks-only) locally — tunnel, env vars, simulated updates, and what can/can't be verified without a real Telegram user.
+description: How to end-to-end test the SelfHeal Telegram bot (aiogram 3 webhooks) — local tunnel runs AND production @SelfHeal_KIT_bot via Cloudflare Worker relay, simulated updates, and Bot-API-based verification tricks.
 ---
 
 # Testing the SelfHeal Telegram bot (webhook path)
 
-The app (FastAPI + aiogram 3, `uvicorn app.main:app --port 8000`) registers a Telegram webhook on startup — it never polls, so a public HTTPS URL is required for real Telegram delivery.
+The app (FastAPI + aiogram 3) registers a Telegram webhook on startup — it never polls.
 
 ## Devin Secrets Needed
-- `BOT_TOKEN` — Telegram bot token (provision via session/org secrets). Do NOT write it to files; bind via exec `env` or read it hidden (`read -s BOT_TOKEN; export BOT_TOKEN`).
+- `BOT_TOKEN` — test bot (@selfheal_test_bot) token for local runs.
+- `SelfHeal_KIT_bot_TOKEN` — PROD bot token; also fetchable via `ssh grep ^BOT_TOKEN /opt/bots/selfheal-bot/.env`.
+- VPS access: `ssh -i ~/.ssh/selfheal_vps root@194.67.113.21` (code at /opt/bots/selfheal-bot, `journalctl -u selfheal-bot`).
 
-## Setup
-1. `.venv` exists at repo root; deps already installed (`requirements.txt`).
-2. Download cloudflared if absent: `curl -sL -o /tmp/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 && chmod +x /tmp/cloudflared`.
-3. Start a quick tunnel: `/tmp/cloudflared tunnel --url http://localhost:8000 --no-autoupdate` → grab the `https://*.trycloudflare.com` URL from its log.
-4. Start the app with `BOT_TOKEN` and `WEBHOOK_BASE_URL=<tunnel URL>` env vars (or a `.env`; config also reads `.env` via pydantic-settings).
-5. Verify: `curl "https://api.telegram.org/bot$BOT_TOKEN/getWebhookInfo"` shows the tunnel URL + `/webhooks/telegram`, `pending_update_count` small/zero, no `last_error_message`.
+## Two surfaces
 
-## Endpoints
-- `POST /webhooks/telegram` — feeds Update JSON to aiogram Dispatcher.
-- `POST /webhooks/getcourse` — stub, logs JSON or form payload, returns `{"status":"ok"}`.
-- `GET /health`.
+### Local run
+`.venv` at repo root. Start cloudflared quick tunnel (`/tmp/cloudflared tunnel --url http://localhost:8000`), set `BOT_TOKEN` + `WEBHOOK_BASE_URL=<tunnel>`, run `.venv/bin/uvicorn app.main:app`. Verify `getWebhookInfo`.
 
-## Key testing knowledge
-- Simulating a `/start` update works end-to-end through the tunnel URL: POST a Telegram Update JSON (`message.from.id`, `chat.id`, `text:"/start"`, `entities:[{"type":"bot_command","offset":0,"length":6}]`).
-- The handler writes the user row to `selfheal.db` (SQLite) BEFORE calling `message.answer`. With a made-up telegram_id, sendMessage fails (`Bad Request: chat not found` / Forbidden) and propagates → webhook returns HTTP 500, but the DB row exists. Verify the DB write as the pass criterion and record the HTTP status honestly.
-- `/start ref_N` stores `referrer_id=N` in the users row; repeated `/start` doesn't duplicate (users.telegram_id is PRIMARY KEY).
-- Inspect DB without sqlite3 CLI: `python3 -c "import sqlite3; [print(r) for r in sqlite3.connect('selfheal.db').execute('SELECT * FROM users')]"`.
-- For a full real-user check, get the username via `getMe`, ask the user to send /start, and poll the users table for a new telegram_id. A real delivery shows `POST /webhooks/telegram ... 200 OK` and `Update id=N is handled` in uvicorn logs.
-- Known quirk to report, not fix during testing: aiogram handler exceptions propagate out of `dp.feed_update`, so any Telegram API error (user blocked bot, bad chat) surfaces as HTTP 500 and Telegram will retry the update.
+### Production @SelfHeal_KIT_bot
+- Webhook: `https://bot.selfheal369.ru/webhooks/telegram` (Telegram actually targets the Worker `https://selfheal-tg-proxy.selfheal-tg.workers.dev/webhooks/telegram`, which proxies to origin — see `deploy/cloudflare/worker.js`).
+- **Simulated updates**: POST Update JSON to the webhook URL with header `X-Telegram-Bot-Api-Secret-Token` (value = `TELEGRAM_WEBHOOK_SECRET` from VPS .env — fetch via ssh, never print it). Webhook always returns 200 (feed_update wrapped).
+- **Bot API calls**: via Worker relay `https://selfheal-tg-proxy.selfheal-tg.workers.dev/bot<TOKEN>/<METHOD>` — sendMessage/sendPhoto/editMessage*/deleteMessage/forwardMessage all work (>50KB uploads don't; media only via file_id from app code).
+- Admin chat (tg_id 5925313775, `settings.admin_telegram_id`) is the test ground — every bot send is real and visible to the user.
+
+## Verification primitives (prod)
+- **Gap arithmetic** (dup detector): `sendMessage` returns sequential chat ids; `gap = id_after - id_before - 1` = bot messages sent between probes. Edit-in-place → 0; new-screen → +1; author flow → +3. Your own `forwardMessage` copies consume ids too — account for them.
+- **file_unique_id equality**: `sendPhoto(file_id)` probe → `photo[-1].file_unique_id` is content-stable; `forwardMessage(msg)` returns the full Message (caption + photo uid) → proves WHICH image a screen shows.
+- **Delete verify**: `editMessageReplyMarkup` on a deleted msg → "message to edit not found".
+- **Markup-equality probe**: `editMessageReplyMarkup` with the exact expected keyboard JSON → "Bad Request: message is not modified" = keyboard was already exactly that (PASS). If it succeeds, markup differed — still non-destructive if your JSON mirrors the code's keyboard.
+- **Force the delete-failure fallback** (PR #33 path): relay `sendMessage`/`sendPhoto` → `deleteMessage` it → simulated callback on that dead message → handler sends new screen, `delete()` fails → `logger.warning("...failed to delete...")` in `journalctl -u selfheal-bot` — proves try/except fires and no retry-dup occurs.
+- **Update JSON shape**: callback update needs `callback_query{ id, from{admin}, message{message_id of REAL msg, from{id:8699077910 is_bot:true}, chat{admin private}, date, "photo":[...] if photo msg}, chat_instance, data }`. Message update: `message{message_id, from{admin}, chat, date, text, entities[bot_command]}`. Fake callback ids can't be answered (Telegram QUERY_ID_INVALID → one ERROR log, harmless; webhook still 200).
+
+## Known quirks
+- `DEBOUNCE_SECONDS=0.6` middleware drops same-(user,data) callbacks — rapid-fire tests see single handling.
+- No read-only "get message" Bot API exists: inspect content via `forwardMessage` (strips kb) or mutating edit probes.
+- Admin commands: `/stats`, `/pending_orders` (PR #32 branch may be deployed ahead of merge), `/backupdb`, `/promo*`, `/getfileid`, `/menu`. Admin's own messages aren't inbox-forwarded.
+- Don't blanket-`deleteMessage` by id range in admin chat — bots can delete ANY private-chat message including the user's. Delete only ids you created.
