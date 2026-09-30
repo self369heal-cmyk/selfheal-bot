@@ -21,7 +21,27 @@ router = Router()
 
 TRACK_PRICE = 900
 
-CATALOG_TITLE = "🔊 Выберите, с чем сейчас работаем:"
+# короткие названия кнопок-разделителей (неактивные) и треков — утверждены заказчиком
+SECTION_SHORT = {
+    "emotions": "😔 Эмоции и психика",
+    "energy": "☀️ Энергия и деньги",
+    "body": "💪 Исцеление тела",
+}
+SECTION_ORDER = ("emotions", "energy", "body")
+TRACK_SHORT = {
+    1: "АнтиСтресс",
+    2: "Исцеление эмоций",
+    3: "Хороший сон",
+    4: "Хорошее настроение",
+    5: "Концентрация",
+    6: "Энергия",
+    7: "Деньги и изобилие",
+    8: "Связь с Душой",
+    9: "Здоровая спина",
+    10: "Здоровая голова",
+    11: "ЖКТ и пищеварение",
+    12: "Иммунитет",
+}
 
 # track_id -> slug страницы оплаты GetCourse (edu.selfheal369.ru/{slug})
 TRACK_PAY_SLUGS = {
@@ -47,27 +67,55 @@ SECTIONS: dict[str, str] = {
 }
 
 
-def catalog_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            *[
-                [InlineKeyboardButton(text=label, callback_data=f"sec:{key}")]
-                for key, label in SECTIONS.items()
-            ],
-            [InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)],
-        ]
-    )
+async def catalog_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
+    """Единый экран каталога: весь список текстом + кнопки треков с разделителями.
+    Купленные треки помечаются ✅ и в тексте, и на кнопке."""
+    tracks = await db.get_all_tracks()
+    owned = {r["track_id"] for r in await db.get_user_tracks(telegram_id)}
 
-
-def section_kb(tracks: list) -> InlineKeyboardMarkup:
-    rows = [
-        [InlineKeyboardButton(text=t["title"], callback_data=f"track:{t['track_id']}")]
-        for t in tracks
+    lines: list[str] = [
+        "🧬 <b>Коды Исцеления Тела (КИТ)</b>: исцеляющие аудиотреки.",
+        "",
+        "Они улучшают самочувствие, снимают боли и напряжение, "
+        "успокаивают психику и убирают стресс.",
+        "",
+        "<b>3 раздела и 12 треков</b>",
+        "",
     ]
-    rows.append(
-        [InlineKeyboardButton(text="⬅️ Назад к разделам", callback_data="catalog")]
-    )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    for sec in SECTION_ORDER:
+        lines.append(f"<b>{SECTIONS[sec]}</b>")
+        for t in tracks:
+            if t["section"] == sec:
+                mark = "✅ " if t["track_id"] in owned else ""
+                main, _, rest = t["title"].partition(" (")
+                rest = f" ({rest}" if rest else ""
+                lines.append(f"{mark}{t['track_id']}. <b>{main}</b>{rest}")
+        lines.append("")
+    text = "\n".join(lines).rstrip()
+
+    rows: list[list[InlineKeyboardButton]] = []
+    for sec in SECTION_ORDER:
+        rows.append(
+            [InlineKeyboardButton(text=SECTION_SHORT[sec], callback_data="noop")]
+        )
+        pair: list[InlineKeyboardButton] = []
+        for t in tracks:
+            if t["section"] != sec:
+                continue
+            mark = "✅ " if t["track_id"] in owned else ""
+            pair.append(
+                InlineKeyboardButton(
+                    text=f"{mark}{t['track_id']}. {TRACK_SHORT.get(t['track_id'], t['title'])}",
+                    callback_data=f"track:{t['track_id']}",
+                )
+            )
+            if len(pair) == 2:
+                rows.append(pair)
+                pair = []
+        if pair:
+            rows.append(pair)
+    rows.append([InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)])
+    return text, InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def track_card_text(track, free_available: bool, owned: bool) -> str:
@@ -146,8 +194,8 @@ def track_kb(
     rows.append(
         [
             InlineKeyboardButton(
-                text="⬅️ Назад в раздел",
-                callback_data=f"sec:{track['section']}",
+                text="⬅️ Назад к каталогу",
+                callback_data="catalog",
                 style="danger",
             )
         ]
@@ -155,22 +203,23 @@ def track_kb(
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+@router.callback_query(F.data == "noop")
+async def noop_button(callback: CallbackQuery) -> None:
+    # разделитель-заголовок: только гасим «часики»
+    await callback.answer()
+
+
 @router.callback_query(F.data == "catalog")
 async def show_catalog(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(CATALOG_TITLE, reply_markup=catalog_kb())
+    text, kb = await catalog_view(callback.from_user.id)
+    await callback.message.edit_text(text, reply_markup=kb)
 
 
 @router.callback_query(F.data.startswith("sec:"))
 async def show_section(callback: CallbackQuery) -> None:
-    section = callback.data.split(":", 1)[1]
-    tracks = await db.get_tracks_by_section(section)
-    if not tracks:
-        await callback.answer("В этом разделе пока нет треков", show_alert=True)
-        return
-    await callback.message.edit_text(
-        f"{SECTIONS.get(section, 'Раздел')}: выберите трек 🔊",
-        reply_markup=section_kb(tracks),
-    )
+    # старые экраны с кнопками разделов — ведём в общий каталог
+    text, kb = await catalog_view(callback.from_user.id)
+    await callback.message.edit_text(text, reply_markup=kb)
 
 
 @router.callback_query(F.data.startswith("track:"))

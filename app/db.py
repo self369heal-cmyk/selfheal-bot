@@ -233,6 +233,15 @@ async def create_user(telegram_id: int, referrer_id: int | None = None) -> None:
         await db.commit()
 
 
+async def get_all_tracks() -> list[aiosqlite.Row]:
+    async with _connect() as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM tracks ORDER BY track_id"
+        )
+        return await cursor.fetchall()
+
+
 async def get_tracks_by_section(section: str) -> list[aiosqlite.Row]:
     async with _connect() as db:
         db.row_factory = aiosqlite.Row
