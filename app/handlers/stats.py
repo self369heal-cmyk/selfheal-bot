@@ -97,6 +97,34 @@ async def cmd_stats(message: Message) -> None:
     await message.answer(render_stats(overview))
 
 
+@router.message(Command("pending_orders"))
+async def cmd_pending_orders(message: Message) -> None:
+    """Заказы, созданные более часа назад и ещё не оплаченные."""
+    if not _is_admin(message):
+        return
+    rows = await db.pending_unpaid_orders(3600)
+    if not rows:
+        await message.answer("🕐 Неоплаченных заказов старше часа нет.")
+        return
+    now = datetime.now(timezone.utc)
+    lines = ["⏳ <b>Неоплаченные заказы (>1 ч)</b>", ""]
+    for r in rows:
+        try:
+            created = datetime.fromisoformat(r["created_at"])
+            mins = int((now - created).total_seconds() // 60)
+            age = f"{mins // 60} ч {mins % 60} мин" if mins >= 60 else f"{mins} мин"
+        except (TypeError, ValueError):
+            age = "?"
+        tg = r["telegram_id"] or "—"
+        lines.append(
+            f"№ {r['order_number']} • {r['product_title'] or '—'} • "
+            f"{r['amount_rub']} ₽ • {age} назад\n"
+            f"   👤 {r['customer_name'] or '—'} • ✉️ {r['customer_email'] or '—'} • "
+            f"📱 {r['customer_phone'] or '—'} • 🆔 {tg}"
+        )
+    await message.answer("\n\n".join(lines))
+
+
 async def send_daily_digest(bot: Bot) -> None:
     since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     stats = await db.get_daily_stats(since)

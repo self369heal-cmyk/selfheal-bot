@@ -24,6 +24,11 @@ TG_ID_KEYS = ("telegram_id", "tg_id", "user_id", "chat_id")
 TRACK_TITLE_KEYS = ("track", "track_title", "title", "product_name", "offer_name")
 OFFER_ID_KEYS = ("offer_id", "offers")
 STATUS_KEYS = ("status", "payment_status", "deal_status")
+FIRST_NAME_KEYS = ("first_name", "name", "user_first_name")
+LAST_NAME_KEYS = ("last_name", "surname", "user_last_name")
+EMAIL_KEYS = ("email", "user_email")
+PHONE_KEYS = ("phone", "user_phone", "telephone")
+AMOUNT_KEYS = ("cost", "amount", "sum", "cost_money_value", "money_value")
 
 # оффер GetCourse -> track_id каталога (названия в GC и в боте расходятся,
 # поэтому матчинг по id оффера надёжнее, чем по названию)
@@ -72,6 +77,71 @@ async def _collect_payload(request: Request) -> dict:
     return payload
 
 
+def _extract_customer(payload: dict) -> dict:
+    """Общий разбор полей покупателя из payload GetCourse."""
+    first = str(_pick(payload, FIRST_NAME_KEYS) or "").strip()
+    last = str(_pick(payload, LAST_NAME_KEYS) or "").strip()
+    raw_amount = _pick(payload, AMOUNT_KEYS)
+    try:
+        amount = int(float(str(raw_amount).replace(",", "."))) if raw_amount else 0
+    except (TypeError, ValueError):
+        amount = 0
+    return {
+        "name": " ".join(p for p in (first, last) if p) or None,
+        "email": str(_pick(payload, EMAIL_KEYS) or "").strip() or None,
+        "phone": str(_pick(payload, PHONE_KEYS) or "").strip() or None,
+        "amount": amount,
+    }
+
+
+async def _notify_admin_order(bot, *, header: str, order: dict) -> None:
+    """Уведомление админу о заказе. Сбой логируем (только номер заказа и tg_id),
+    на выдачу трека не влияет."""
+    try:
+        tg = order.get("telegram_id")
+        tg_str = str(tg) if tg else "—"
+        lines = [
+            header,
+            f"№ {order['order_number']}",
+            f"🎧 {order.get('product_title') or '—'}",
+            f"💰 {order.get('amount_rub') or 0} ₽",
+            f"👤 {order.get('customer_name') or '—'}",
+            f"✉️ {order.get('customer_email') or '—'}",
+            f"📱 {order.get('customer_phone') or '—'}",
+            f"🆔 telegram_id: {tg_str}",
+            f"🕐 {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M UTC')}",
+        ]
+        extra = order.get("extra_line")
+        if extra:
+            lines.append(extra)
+        await bot.send_message(settings.admin_telegram_id, "\n".join(lines))
+    except TelegramAPIError:
+        logger.exception(
+            "admin order notify failed: order=%s tg=%s",
+            order.get("order_number"),
+            order.get("telegram_id"),
+        )
+
+
+async def _resolve_product_title(
+    offer: tuple[str, int, int] | None, title_param: Any
+) -> str | None:
+    """Название продукта: по каталогу бота при известном оффере, иначе как пришло."""
+    if offer is not None and offer[0] == "track":
+        track = await db.get_track(offer[1])
+        if track is not None:
+            return track["title"]
+    if offer is not None and offer[0] == "med":
+        from app.meditations import get_meditation
+
+        med = get_meditation(offer[1])
+        if med is not None:
+            return med["title"]
+    if title_param:
+        return str(title_param).strip()
+    return None
+
+
 def _extract_offer(raw: Any) -> tuple[str, int, int] | None:
     """{object.offers} как '8759153' или '8759153,8759154'
     -> ('track'|'med', id продукта в каталоге, id оффера GetCourse)."""
@@ -88,6 +158,106 @@ def _extract_offer(raw: Any) -> tuple[str, int, int] | None:
     return None
 
 
+@router.get("/order-created")
+@router.post("/order-created")
+async def getcourse_order_created(request: Request) -> JSONResponse:
+    """Вебхук «заказ создан в GetCourse» — присылает уведомление админу.
+
+    telegram_id может отсутствовать (заказ не через бота) — уведомление
+    всё равно приходит с прочерком.
+    """
+    payload = await _collect_payload(request)
+    order_number = str(
+        _pick(payload, ("order_number", "order_id", "deal_id")) or ""
+    ).strip()
+    logger.info(
+        "GetCourse order-created received: order=%s tg=%s",
+        order_number or "?",
+        _pick(payload, TG_ID_KEYS),
+    )
+    if not order_number:
+        return JSONResponse(
+            {"status": "error", "error": "missing_order_number"}, status_code=400
+        )
+
+    raw_tg_id = _pick(payload, TG_ID_KEYS)
+    try:
+        telegram_id = int(raw_tg_id) if raw_tg_id not in (None, "", "0") else None
+    except (TypeError, ValueError):
+        telegram_id = None
+
+    offer = _extract_offer(_pick(payload, OFFER_ID_KEYS))
+    track_id = offer[1] if offer and offer[0] == "track" else None
+    offer_id = offer[2] if offer else None
+    title_param = _pick(payload, TRACK_TITLE_KEYS)
+    product_title = await _resolve_product_title(offer, title_param)
+    customer = _extract_customer(payload)
+
+    created = await db.upsert_order_created(
+        order_number,
+        telegram_id,
+        track_id,
+        offer_id,
+        customer["amount"],
+        product_title,
+        customer["name"],
+        customer["email"],
+        customer["phone"],
+    )
+    if not created:
+        return JSONResponse({"status": "duplicate"})
+
+    bot = getattr(request.app.state, "bot", None)
+    if bot is not None:
+        await _notify_admin_order(
+            bot,
+            header="🆕 Новый заказ",
+            order={
+                "order_number": order_number,
+                "product_title": product_title,
+                "amount_rub": customer["amount"],
+                "customer_name": customer["name"],
+                "customer_email": customer["email"],
+                "customer_phone": customer["phone"],
+                "telegram_id": telegram_id,
+            },
+        )
+    return JSONResponse({"status": "ok"})
+
+
+async def _notify_paid_admin(
+    bot, order_number: str, order: Any
+) -> None:
+    """«✅ Заказ оплачен» — один раз на заказ (paid_notified), со временем
+    от создания до оплаты, если событие «создан» приходило раньше."""
+    if order is None or not await db.try_mark_paid_notified(order_number):
+        return
+    extra = None
+    try:
+        created_at = datetime.fromisoformat(order["created_at"])
+        paid_at = datetime.fromisoformat(order["paid_at"])
+        delta = paid_at - created_at
+        minutes = int(delta.total_seconds() // 60)
+        if minutes >= 1:
+            extra = f"⏱ оплачен через {minutes // 60} ч {minutes % 60} мин после создания"
+    except (TypeError, ValueError, KeyError):
+        pass
+    await _notify_admin_order(
+        bot,
+        header="✅ Заказ оплачен",
+        order={
+            "order_number": order_number,
+            "product_title": order["product_title"],
+            "amount_rub": order["amount_rub"],
+            "customer_name": order["customer_name"],
+            "customer_email": order["customer_email"],
+            "customer_phone": order["customer_phone"],
+            "telegram_id": order["telegram_id"] or None,
+            "extra_line": extra,
+        },
+    )
+
+
 async def _deliver_meditation(
     request: Request, telegram_id: int, med: dict, order_number: str
 ) -> JSONResponse:
@@ -100,14 +270,15 @@ async def _deliver_meditation(
         )
 
     await db.add_user_meditation(telegram_id, med["med_id"])
-    await db.record_order(
+    order_number = (
         order_number
-        or f"auto-{telegram_id}-m{med['med_id']}-{int(datetime.now(timezone.utc).timestamp())}",
-        telegram_id,
-        None,
-        med["offer_id"],
-        med["price"],
+        or f"auto-{telegram_id}-m{med['med_id']}-{int(datetime.now(timezone.utc).timestamp())}"
     )
+    order = await db.mark_order_paid(
+        order_number, telegram_id, None, med["offer_id"], med["price"],
+        product_title=med["title"],
+    )
+    await _notify_paid_admin(bot, order_number, order)
 
     if med["file_id"] or med["audio_id"]:
         await bot.send_message(
@@ -210,7 +381,12 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
     user_tracks и отправляет трек пользователю по file_id.
     """
     payload = await _collect_payload(request)
-    logger.info("GetCourse webhook received: %s", payload)
+    logger.info(
+        "GetCourse webhook received: order=%s tg=%s offer=%s",
+        _pick(payload, ("order_number", "order_id", "deal_id")),
+        _pick(payload, TG_ID_KEYS),
+        _pick(payload, OFFER_ID_KEYS),
+    )
 
     status = str(_pick(payload, STATUS_KEYS) or "").strip().lower()
     if status and status not in PAID_STATUSES:
@@ -299,13 +475,23 @@ async def getcourse_webhook(request: Request) -> JSONResponse:
             )
 
     await db.add_user_track(telegram_id, track["track_id"])
-    await db.record_order(
-        order_number or f"auto-{telegram_id}-{track['track_id']}-{int(datetime.now(timezone.utc).timestamp())}",
+    customer = _extract_customer(payload)
+    order_number = (
+        order_number
+        or f"auto-{telegram_id}-{track['track_id']}-{int(datetime.now(timezone.utc).timestamp())}"
+    )
+    order = await db.mark_order_paid(
+        order_number,
         telegram_id,
         track["track_id"],
         offer[2] if offer else None,
-        settings.track_price_rub,
+        customer["amount"] or settings.track_price_rub,
+        product_title=track["title"],
+        customer_name=customer["name"],
+        customer_email=customer["email"],
+        customer_phone=customer["phone"],
     )
+    await _notify_paid_admin(bot, order_number, order)
     try:
         from app.handlers.referral import PURCHASES_BUTTON_TEXT
         from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
