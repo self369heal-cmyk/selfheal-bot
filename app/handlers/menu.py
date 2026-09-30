@@ -1,6 +1,7 @@
 import logging
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
@@ -37,7 +38,10 @@ async def show_menu(callback: CallbackQuery) -> None:
         # фото-экран (каталог) нельзя превратить в текст — шлём меню новым сообщением;
         # сначала отправка, потом удаление — при сбое экран не потеряется
         await callback.message.answer(MENU_TITLE, reply_markup=main_menu_kb())
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except TelegramAPIError:
+            logger.warning("show_menu: failed to delete photo screen")
     else:
         await callback.message.edit_text(MENU_TITLE, reply_markup=main_menu_kb())
 

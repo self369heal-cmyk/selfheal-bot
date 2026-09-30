@@ -1,6 +1,7 @@
 import logging
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -100,7 +101,10 @@ async def _catalog_to_message(message, text: str, kb: InlineKeyboardMarkup) -> N
         await message.answer_photo(
             photo=CATALOG_PHOTO_FILE_ID, caption=text, reply_markup=kb
         )
-        await message.delete()
+        try:
+            await message.delete()
+        except TelegramAPIError:
+            logger.warning("catalog: failed to delete old message")
 
 
 async def _photo_card(callback: CallbackQuery, photo_id: str, text: str, kb) -> None:
@@ -114,7 +118,10 @@ async def _photo_card(callback: CallbackQuery, photo_id: str, text: str, kb) -> 
         await callback.message.answer_photo(
             photo=photo_id, caption=text, reply_markup=kb
         )
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except TelegramAPIError:
+            logger.warning("photo card: failed to delete old message")
 
 
 async def edit_card(callback: CallbackQuery, text: str, kb=None) -> None:
