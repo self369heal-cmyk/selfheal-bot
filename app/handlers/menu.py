@@ -42,6 +42,10 @@ async def show_menu(callback: CallbackQuery) -> None:
             await callback.message.delete()
         except TelegramAPIError:
             logger.warning("show_menu: failed to delete photo screen")
+            try:
+                await callback.message.edit_reply_markup()
+            except TelegramAPIError:
+                pass
     else:
         await callback.message.edit_text(MENU_TITLE, reply_markup=main_menu_kb())
 

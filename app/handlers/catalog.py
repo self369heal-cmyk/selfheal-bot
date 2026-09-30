@@ -105,6 +105,10 @@ async def _catalog_to_message(message, text: str, kb: InlineKeyboardMarkup) -> N
             await message.delete()
         except TelegramAPIError:
             logger.warning("catalog: failed to delete old message")
+            try:
+                await message.edit_reply_markup()
+            except TelegramAPIError:
+                pass
 
 
 async def _photo_card(callback: CallbackQuery, photo_id: str, text: str, kb) -> None:
@@ -122,6 +126,10 @@ async def _photo_card(callback: CallbackQuery, photo_id: str, text: str, kb) -> 
             await callback.message.delete()
         except TelegramAPIError:
             logger.warning("photo card: failed to delete old message")
+            try:
+                await callback.message.edit_reply_markup()
+            except TelegramAPIError:
+                pass
 
 
 async def edit_card(callback: CallbackQuery, text: str, kb=None) -> None:
