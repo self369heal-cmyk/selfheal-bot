@@ -53,12 +53,19 @@ CREATE TABLE IF NOT EXISTS inbox_map (
 );
 
 CREATE TABLE IF NOT EXISTS orders (
-    order_number TEXT PRIMARY KEY,
-    telegram_id  INTEGER NOT NULL,
-    track_id     INTEGER,
-    offer_id     INTEGER,
-    amount_rub   INTEGER NOT NULL DEFAULT 0,
-    created_at   TEXT NOT NULL
+    order_number   TEXT PRIMARY KEY,
+    telegram_id    INTEGER NOT NULL,
+    track_id       INTEGER,
+    offer_id       INTEGER,
+    amount_rub     INTEGER NOT NULL DEFAULT 0,
+    created_at     TEXT NOT NULL,
+    paid_at        TEXT,
+    product_title  TEXT,
+    customer_name  TEXT,
+    customer_email TEXT,
+    customer_phone TEXT,
+    paid_notified  INTEGER NOT NULL DEFAULT 0,
+    is_test        INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS user_meditations (
@@ -197,6 +204,23 @@ async def init_db() -> None:
             await db.execute(
                 "ALTER TABLE referrals ADD COLUMN source_track_id INTEGER"
             )
+        cursor = await db.execute("PRAGMA table_info(orders)")
+        order_columns = {row[1] for row in await cursor.fetchall()}
+        for name, decl in (
+            ("paid_at", "TEXT"),
+            ("product_title", "TEXT"),
+            ("customer_name", "TEXT"),
+            ("customer_email", "TEXT"),
+            ("customer_phone", "TEXT"),
+            ("paid_notified", "INTEGER NOT NULL DEFAULT 0"),
+            ("is_test", "INTEGER NOT NULL DEFAULT 0"),
+        ):
+            if name not in order_columns:
+                await db.execute(f"ALTER TABLE orders ADD COLUMN {name} {decl}")
+        # заказы, записанные до появления события «создан», считаем оплаченными
+        await db.execute(
+            "UPDATE orders SET paid_at = created_at WHERE paid_at IS NULL"
+        )
         await db.executemany(
             """
             INSERT INTO tracks (track_id, title, section, description, file_id)
@@ -420,19 +444,103 @@ async def get_inbox_user(admin_message_id: int) -> int | None:
         return row[0] if row else None
 
 
-async def record_order(
+async def upsert_order_created(
+    order_number: str,
+    telegram_id: int | None,
+    track_id: int | None,
+    offer_id: int | None,
+    amount_rub: int,
+    product_title: str | None,
+    customer_name: str | None,
+    customer_email: str | None,
+    customer_phone: str | None,
+) -> bool:
+    """Записать событие «заказ создан». False — заказ уже есть (идемпотентность)."""
+    async with _connect() as db:
+        cursor = await db.execute(
+            "SELECT 1 FROM orders WHERE order_number = ?", (order_number,)
+        )
+        exists = await cursor.fetchone() is not None
+        await db.execute(
+            """
+            INSERT INTO orders
+                (order_number, telegram_id, track_id, offer_id, amount_rub,
+                 product_title, customer_name, customer_email, customer_phone,
+                 created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(order_number) DO UPDATE SET
+                telegram_id    = CASE WHEN orders.telegram_id = 0
+                                   THEN COALESCE(excluded.telegram_id, 0)
+                                   ELSE orders.telegram_id END,
+                track_id       = COALESCE(excluded.track_id, orders.track_id),
+                offer_id       = COALESCE(excluded.offer_id, orders.offer_id),
+                amount_rub     = CASE WHEN excluded.amount_rub > 0
+                                   THEN excluded.amount_rub ELSE orders.amount_rub END,
+                product_title  = COALESCE(excluded.product_title, orders.product_title),
+                customer_name  = COALESCE(excluded.customer_name, orders.customer_name),
+                customer_email = COALESCE(excluded.customer_email, orders.customer_email),
+                customer_phone = COALESCE(excluded.customer_phone, orders.customer_phone)
+            """,
+            (
+                order_number,
+                telegram_id if telegram_id is not None else 0,
+                track_id,
+                offer_id,
+                amount_rub,
+                product_title,
+                customer_name,
+                customer_email,
+                customer_phone,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        await db.commit()
+        return not exists
+
+
+async def get_order(order_number: str) -> aiosqlite.Row | None:
+    async with _connect() as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM orders WHERE order_number = ?", (order_number,)
+        )
+        return await cursor.fetchone()
+
+
+async def mark_order_paid(
     order_number: str,
     telegram_id: int,
     track_id: int | None,
     offer_id: int | None,
     amount_rub: int,
-) -> None:
+    product_title: str | None = None,
+    customer_name: str | None = None,
+    customer_email: str | None = None,
+    customer_phone: str | None = None,
+) -> aiosqlite.Row | None:
+    """Отметить заказ оплаченным; возвращает строку заказа (created_at для
+    расчёта времени до оплаты)."""
+    now = datetime.now(timezone.utc).isoformat()
     async with _connect() as db:
         await db.execute(
             """
-            INSERT OR IGNORE INTO orders
-                (order_number, telegram_id, track_id, offer_id, amount_rub, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO orders
+                (order_number, telegram_id, track_id, offer_id, amount_rub,
+                 product_title, customer_name, customer_email, customer_phone,
+                 created_at, paid_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(order_number) DO UPDATE SET
+                paid_at        = excluded.paid_at,
+                telegram_id    = CASE WHEN orders.telegram_id IN (NULL, 0)
+                                   THEN excluded.telegram_id ELSE orders.telegram_id END,
+                track_id       = COALESCE(excluded.track_id, orders.track_id),
+                offer_id       = COALESCE(excluded.offer_id, orders.offer_id),
+                amount_rub     = CASE WHEN excluded.amount_rub > 0
+                                   THEN excluded.amount_rub ELSE orders.amount_rub END,
+                product_title  = COALESCE(excluded.product_title, orders.product_title),
+                customer_name  = COALESCE(excluded.customer_name, orders.customer_name),
+                customer_email = COALESCE(excluded.customer_email, orders.customer_email),
+                customer_phone = COALESCE(excluded.customer_phone, orders.customer_phone)
             """,
             (
                 order_number,
@@ -440,10 +548,70 @@ async def record_order(
                 track_id,
                 offer_id,
                 amount_rub,
-                datetime.now(timezone.utc).isoformat(),
+                product_title,
+                customer_name,
+                customer_email,
+                customer_phone,
+                now,
+                now,
             ),
         )
         await db.commit()
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM orders WHERE order_number = ?", (order_number,)
+        )
+        return await cursor.fetchone()
+
+
+async def try_mark_paid_notified(order_number: str) -> bool:
+    """True только при первой отметке — защита от дубля уведомления «оплачен»."""
+    async with _connect() as db:
+        cursor = await db.execute(
+            "UPDATE orders SET paid_notified = 1 "
+            "WHERE order_number = ? AND paid_notified = 0",
+            (order_number,),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+
+async def pending_unpaid_orders(older_seconds: int = 3600) -> list[aiosqlite.Row]:
+    """Заказы, созданные раньше older_seconds назад и ещё не оплаченные."""
+    cutoff = datetime.fromtimestamp(
+        datetime.now(timezone.utc).timestamp() - older_seconds, timezone.utc
+    ).isoformat()
+    async with _connect() as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """
+            SELECT * FROM orders
+            WHERE paid_at IS NULL AND is_test = 0 AND created_at < ?
+            ORDER BY created_at
+            """,
+            (cutoff,),
+        )
+        return await cursor.fetchall()
+
+
+async def mark_order_test(order_number: str) -> bool:
+    """Пометить заказ тестовым — исключается из выручки и pending-списка."""
+    async with _connect() as db:
+        cursor = await db.execute(
+            "UPDATE orders SET is_test = 1 WHERE order_number = ?", (order_number,)
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+
+async def record_order(
+    order_number: str,
+    telegram_id: int,
+    track_id: int | None,
+    offer_id: int | None,
+    amount_rub: int,
+) -> None:
+    await mark_order_paid(order_number, telegram_id, track_id, offer_id, amount_rub)
 
 
 async def get_stats_overview() -> dict:
@@ -459,18 +627,32 @@ async def get_stats_overview() -> dict:
                 """
                 SELECT COUNT(*) FROM users u
                 WHERE u.got_free_track = 1
-                  AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.telegram_id = u.telegram_id)
+                  AND NOT EXISTS (
+                      SELECT 1 FROM orders o
+                      WHERE o.telegram_id = u.telegram_id
+                        AND o.paid_at IS NOT NULL AND o.is_test = 0
+                  )
                 """
             ),
-            "buyers": await one("SELECT COUNT(DISTINCT telegram_id) FROM orders"),
-            "orders_total": await one("SELECT COUNT(*) FROM orders"),
-            "revenue_total": await one("SELECT COALESCE(SUM(amount_rub),0) FROM orders"),
+            "buyers": await one(
+                "SELECT COUNT(DISTINCT telegram_id) FROM orders "
+                "WHERE paid_at IS NOT NULL AND is_test = 0"
+            ),
+            "orders_total": await one(
+                "SELECT COUNT(*) FROM orders WHERE paid_at IS NOT NULL AND is_test = 0"
+            ),
+            "revenue_total": await one(
+                "SELECT COALESCE(SUM(amount_rub),0) FROM orders "
+                "WHERE paid_at IS NOT NULL AND is_test = 0"
+            ),
             "referrals_total": await one("SELECT COUNT(*) FROM referrals"),
             "ref_buyers": await one(
                 """
                 SELECT COUNT(*) FROM referrals r
                 WHERE EXISTS (
-                    SELECT 1 FROM orders o WHERE o.telegram_id = r.referred_id
+                    SELECT 1 FROM orders o
+                    WHERE o.telegram_id = r.referred_id
+                      AND o.paid_at IS NOT NULL AND o.is_test = 0
                 )
                 """
             ),
@@ -478,7 +660,8 @@ async def get_stats_overview() -> dict:
             "purchases_total": await one(
                 """
                 SELECT COUNT(*) FROM orders
-                WHERE track_id IS NOT NULL OR offer_id IS NOT NULL
+                WHERE (track_id IS NOT NULL OR offer_id IS NOT NULL)
+                  AND paid_at IS NOT NULL AND is_test = 0
                 """
             ),
             "messages_total": await one("SELECT COUNT(*) FROM user_messages"),
@@ -487,7 +670,8 @@ async def get_stats_overview() -> dict:
         cursor = await db.execute(
             """
             SELECT t.title, COUNT(o.order_number) AS cnt
-            FROM tracks t LEFT JOIN orders o ON o.track_id = t.track_id
+            FROM tracks t LEFT JOIN orders o
+                ON o.track_id = t.track_id AND o.paid_at IS NOT NULL AND o.is_test = 0
             GROUP BY t.track_id ORDER BY cnt DESC, t.track_id
             """
         )
@@ -532,10 +716,13 @@ async def get_daily_stats(since_iso: str) -> dict:
                 "SELECT COUNT(*) FROM users WHERE registered_at >= ?", (since_iso,)
             ),
             "orders": await one(
-                "SELECT COUNT(*) FROM orders WHERE created_at >= ?", (since_iso,)
+                "SELECT COUNT(*) FROM orders "
+                "WHERE paid_at >= ? AND is_test = 0",
+                (since_iso,),
             ),
             "revenue": await one(
-                "SELECT COALESCE(SUM(amount_rub),0) FROM orders WHERE created_at >= ?",
+                "SELECT COALESCE(SUM(amount_rub),0) FROM orders "
+                "WHERE paid_at >= ? AND is_test = 0",
                 (since_iso,),
             ),
             "new_referrals": await one(

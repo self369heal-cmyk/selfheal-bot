@@ -10,6 +10,7 @@ from aiogram.types import Message
 from app import db
 from app.config import settings
 from app.meditations import MEDITATIONS_BY_ID
+from app.webhooks.getcourse import _buyer_tg_link
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,39 @@ async def cmd_stats(message: Message) -> None:
         return
     overview = await db.get_stats_overview()
     await message.answer(render_stats(overview))
+
+
+@router.message(Command("pending_orders"))
+async def cmd_pending_orders(message: Message) -> None:
+    """Заказы, созданные более часа назад и ещё не оплаченные."""
+    if not _is_admin(message):
+        return
+    rows = await db.pending_unpaid_orders(3600)
+    if not rows:
+        await message.answer("🕐 Неоплаченных заказов старше часа нет.")
+        return
+    now = datetime.now(timezone.utc)
+    lines = ["⏳ <b>Неоплаченные заказы (>1 ч)</b>", ""]
+    for r in rows:
+        try:
+            created = datetime.fromisoformat(r["created_at"])
+            mins = int((now - created).total_seconds() // 60)
+            age = f"{mins // 60} ч {mins % 60} мин" if mins >= 60 else f"{mins} мин"
+        except (TypeError, ValueError):
+            age = "?"
+        tg = r["telegram_id"] or "—"
+        tg_link = (
+            await _buyer_tg_link(message.bot, r["telegram_id"])
+            if r["telegram_id"]
+            else "—"
+        )
+        lines.append(
+            f"№ {r['order_number']} • {r['product_title'] or '—'} • "
+            f"{r['amount_rub']} ₽ • {age} назад\n"
+            f"   👤 {r['customer_name'] or '—'} • ✉️ {r['customer_email'] or '—'} • "
+            f"📱 {r['customer_phone'] or '—'} • 🆔 {tg} • 💬 {tg_link}"
+        )
+    await message.answer("\n\n".join(lines))
 
 
 async def send_daily_digest(bot: Bot) -> None:
