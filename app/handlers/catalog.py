@@ -96,10 +96,11 @@ async def _catalog_to_message(message, text: str, kb: InlineKeyboardMarkup) -> N
             reply_markup=kb,
         )
     else:
-        await message.delete()
+        # сначала новое фото, потом удаление старого — при сбое экран с кнопками останется
         await message.answer_photo(
             photo=CATALOG_PHOTO_FILE_ID, caption=text, reply_markup=kb
         )
+        await message.delete()
 
 
 async def _photo_card(callback: CallbackQuery, photo_id: str, text: str, kb) -> None:
@@ -110,10 +111,10 @@ async def _photo_card(callback: CallbackQuery, photo_id: str, text: str, kb) -> 
             reply_markup=kb,
         )
     else:
-        await callback.message.delete()
         await callback.message.answer_photo(
             photo=photo_id, caption=text, reply_markup=kb
         )
+        await callback.message.delete()
 
 
 async def edit_card(callback: CallbackQuery, text: str, kb=None) -> None:

@@ -34,9 +34,10 @@ async def cmd_menu(message: Message) -> None:
 @router.callback_query(F.data == CB_MENU)
 async def show_menu(callback: CallbackQuery) -> None:
     if callback.message.photo:
-        # фото-экран (каталог) нельзя превратить в текст — заменяем сообщением меню
-        await callback.message.delete()
+        # фото-экран (каталог) нельзя превратить в текст — шлём меню новым сообщением;
+        # сначала отправка, потом удаление — при сбое экран не потеряется
         await callback.message.answer(MENU_TITLE, reply_markup=main_menu_kb())
+        await callback.message.delete()
     else:
         await callback.message.edit_text(MENU_TITLE, reply_markup=main_menu_kb())
 
