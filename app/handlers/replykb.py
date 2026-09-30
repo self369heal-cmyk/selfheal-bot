@@ -1,7 +1,7 @@
 """Reply-клавиатура 2x2 внизу экрана (закрепляется в /start).
 
 Кнопки открывают те же разделы, что и inline-меню — переиспользуются
-общие view-функции (purchases_view / referral_view / CATALOG_TITLE),
+общие view-функции (purchases_view / referral_view / catalog_view),
 отдельной параллельной логики нет. Роутер включён до inbox (catch-all),
 поэтому тексты кнопок не улетают админу как «свободные сообщения».
 """
@@ -13,7 +13,7 @@ from aiogram.types import Message
 
 from app import db
 from app.handlers import inbox
-from app.handlers.catalog import CATALOG_TITLE, catalog_kb
+from app.handlers.catalog import catalog_view
 from app.handlers.purchases import purchases_view
 from app.handlers.referral import referral_view
 from app.keyboards import (
@@ -40,7 +40,8 @@ async def reply_purchases(message: Message) -> None:
 
 @router.message(F.text.in_({BTN_CATALOG, BTN_CATALOG_LEGACY}))
 async def reply_catalog(message: Message) -> None:
-    await message.answer(CATALOG_TITLE, reply_markup=catalog_kb())
+    text, kb = await catalog_view(message.from_user.id)
+    await message.answer(text, reply_markup=kb)
 
 
 @router.message(F.text.in_({BTN_REFERRALS, BTN_REFERRALS_LEGACY}))
