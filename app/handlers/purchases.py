@@ -186,6 +186,8 @@ async def show_purchased_track(callback: CallbackQuery) -> None:
             return
         caption = await track_caption(callback.bot, callback.from_user.id, track)
         photo_id = TRACK_PHOTO_FILE_IDS.get(track_id, CATALOG_PHOTO_FILE_ID)
+        # единым сообщением нельзя: Telegram не принимает thumbnail по file_id,
+        # а аплоад байтов через Worker-релей недоступен — шлём фото + аудио
         try:
             await callback.message.answer_photo(photo=photo_id)
             await callback.message.answer_audio(
@@ -201,6 +203,21 @@ async def show_purchased_track(callback: CallbackQuery) -> None:
                 "Не удалось отправить файл. Напишите в поддержку",
                 show_alert=True,
             )
+            return
+        await callback.message.answer(
+            "Все ваши треки — в разделе «Мои покупки».",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="⬅️ Назад к покупкам",
+                            callback_data="purchases",
+                            style="danger",
+                        )
+                    ]
+                ]
+            ),
+        )
         return
     bonus_available = False
     if user and not free_available and not owned:
