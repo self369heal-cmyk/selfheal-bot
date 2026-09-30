@@ -10,6 +10,7 @@ from aiogram.types import Message
 from app import db
 from app.config import settings
 from app.meditations import MEDITATIONS_BY_ID
+from app.webhooks.getcourse import _buyer_tg_link
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +117,16 @@ async def cmd_pending_orders(message: Message) -> None:
         except (TypeError, ValueError):
             age = "?"
         tg = r["telegram_id"] or "—"
+        tg_link = (
+            await _buyer_tg_link(message.bot, r["telegram_id"])
+            if r["telegram_id"]
+            else "—"
+        )
         lines.append(
             f"№ {r['order_number']} • {r['product_title'] or '—'} • "
             f"{r['amount_rub']} ₽ • {age} назад\n"
             f"   👤 {r['customer_name'] or '—'} • ✉️ {r['customer_email'] or '—'} • "
-            f"📱 {r['customer_phone'] or '—'} • 🆔 {tg}"
+            f"📱 {r['customer_phone'] or '—'} • 🆔 {tg} • 💬 {tg_link}"
         )
     await message.answer("\n\n".join(lines))
 

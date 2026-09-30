@@ -94,12 +94,29 @@ def _extract_customer(payload: dict) -> dict:
     }
 
 
+async def _buyer_tg_link(bot, telegram_id: int) -> str:
+    """@ник и кликабельная ссылка на Telegram покупателя.
+
+    username подтягиваем через getChat (покупатели через бота — его видно);
+    без ника — ссылка по tg://user?id=. Сбой резолва не блокирует уведомление.
+    """
+    username = None
+    try:
+        chat = await bot.get_chat(telegram_id)
+        username = chat.username
+    except TelegramAPIError:
+        pass
+    label = f"@{username}" if username else str(telegram_id)
+    return f'<a href="tg://user?id={telegram_id}">{label}</a>'
+
+
 async def _notify_admin_order(bot, *, header: str, order: dict) -> None:
     """Уведомление админу о заказе. Сбой логируем (только номер заказа и tg_id),
     на выдачу трека не влияет."""
     try:
         tg = order.get("telegram_id")
         tg_str = str(tg) if tg else "—"
+        tg_link = await _buyer_tg_link(bot, tg) if tg else "—"
         lines = [
             header,
             f"№ {order['order_number']}",
@@ -109,6 +126,7 @@ async def _notify_admin_order(bot, *, header: str, order: dict) -> None:
             f"✉️ {order.get('customer_email') or '—'}",
             f"📱 {order.get('customer_phone') or '—'}",
             f"🆔 telegram_id: {tg_str}",
+            f"💬 {tg_link}",
             f"🕐 {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M UTC')}",
         ]
         extra = order.get("extra_line")
