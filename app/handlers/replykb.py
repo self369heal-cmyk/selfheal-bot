@@ -35,7 +35,9 @@ REVIEW_PROMPT = "Напишите ваш отзыв или вопрос — я �
 @router.message(F.text == BTN_PURCHASES)
 async def reply_purchases(message: Message) -> None:
     text, kb = await purchases_view(message.from_user.id)
-    await message.answer(text, reply_markup=kb)
+    await message.answer_photo(
+        photo=CATALOG_PHOTO_FILE_ID, caption=text, reply_markup=kb
+    )
 
 
 @router.message(F.text.in_({BTN_CATALOG, BTN_CATALOG_LEGACY}))
