@@ -5,6 +5,7 @@ from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    InputMediaPhoto,
 )
 
 from urllib.parse import quote
@@ -23,6 +24,22 @@ TRACK_PRICE = 900
 
 # постер каталога КИТ — file_id боевого бота (assets/catalog-kit.png)
 CATALOG_PHOTO_FILE_ID = "AgACAgQAAxkDAAIHc2q9Dr31zuLfdj76rysaffgTOzlXAAKTD2sbQEftUYf4hHGg_jLjAQADAgADeQADPQQ"
+
+# индивидуальные картинки треков — file_id (assets/tracks/track-NN.png)
+TRACK_PHOTO_FILE_IDS = {
+    1: "AgACAgQAAxkDAAIHpmq9E0r58MJ6lD88FCqsztF0jg1hAAIZD2sbD8rsUcZsLRY1jLpVAQADAgADbQADPQQ",
+    2: "AgACAgQAAxkDAAIHp2q9E0uupALcj55ystGKwEcpBvKLAAKLD2sbp9TsUWOWFUexj_ybAQADAgADbQADPQQ",
+    3: "AgACAgQAAxkDAAIHqGq9E0xaobLO3yvJwJmtqebNpXN9AAJED2sbi5LtUbmFXMDRB-4cAQADAgADbQADPQQ",
+    4: "AgACAgQAAxkDAAIHqWq9E0x4iRtsCX6FYJGVRPeLG5snAAITD2sbW3zsUak-fZiFz8P1AQADAgADbQADPQQ",
+    5: "AgACAgQAAxkDAAIHqmq9E02VZ5EOZqrLTptLgCVmsLbuAAIgD2sbO6ntUVnAGz_e2vuNAQADAgADbQADPQQ",
+    6: "AgACAgQAAxkDAAIHq2q9E08m87iVzkwFRBAoElzWZ6UkAAJmD2sbcNDtUWYtFPFIBFUuAQADAgADbQADPQQ",
+    7: "AgACAgQAAxkDAAIHrGq9E1DixjTMwlY83j6_bwq_WjUEAAJMD2sb1UDtUfj7NjNEiFg8AQADAgADbQADPQQ",
+    8: "AgACAgQAAxkDAAIHrWq9E1BGXYJpBUOHbPmNVnBzAw_8AAJOD2sbsaPtUSRzKxIsvC14AQADAgADbQADPQQ",
+    9: "AgACAgQAAxkDAAIHrmq9E1HniL6sQ_HiH8ZqEybNpSG1AAIvD2sbQb7tUfDvxhHNnHn1AQADAgADbQADPQQ",
+    10: "AgACAgQAAxkDAAIHr2q9E1LZdUV5DOjfW3YPMoMhAymjAAKFD2sbuojsUbbhFaO6Ibm0AQADAgADbQADPQQ",
+    11: "AgACAgQAAxkDAAIHsGq9E1OTLX1FG2O30l53y3ZBVUQkAAIUD2sbF23tUUnxSEwkpprvAQADAgADbQADPQQ",
+    12: "AgACAgQAAxkDAAIHsWq9E1Tcaw-MXW-Jqc7xA4-tUPGsAAJoD2sb0U7tUQ_vaM7uSj8UAQADAgADbQADPQQ",
+}
 
 # короткие названия кнопок-разделителей (неактивные) и треков — утверждены заказчиком
 SECTION_SHORT = {
@@ -71,14 +88,31 @@ SECTIONS: dict[str, str] = {
 
 
 async def _catalog_to_message(message, text: str, kb: InlineKeyboardMarkup) -> None:
-    """Отрисовать каталог: сообщение с фото — меняем подпись,
-    текстовое — заменяем фото-сообщением (единый экран сохраняется)."""
+    """Отрисовать каталог: фото-сообщение — подменяем медиа на постер
+    (карточки треков меняют картинку), текстовое — удаляем и шлём фото."""
     if message.photo:
-        await message.edit_caption(caption=text, reply_markup=kb)
+        await message.edit_media(
+            media=InputMediaPhoto(media=CATALOG_PHOTO_FILE_ID, caption=text),
+            reply_markup=kb,
+        )
     else:
         await message.delete()
         await message.answer_photo(
             photo=CATALOG_PHOTO_FILE_ID, caption=text, reply_markup=kb
+        )
+
+
+async def _photo_card(callback: CallbackQuery, photo_id: str, text: str, kb) -> None:
+    """Фото-карточка: на фото-сообщении — заменить медиа, на текстовом — прислать фото."""
+    if callback.message.photo:
+        await callback.message.edit_media(
+            media=InputMediaPhoto(media=photo_id, caption=text),
+            reply_markup=kb,
+        )
+    else:
+        await callback.message.delete()
+        await callback.message.answer_photo(
+            photo=photo_id, caption=text, reply_markup=kb
         )
 
 
@@ -260,8 +294,9 @@ async def show_track(callback: CallbackQuery) -> None:
     if user and not free_available:
         earned = await db.count_referrals(callback.from_user.id) // 3
         bonus_available = earned + (user["promo_bonus"] or 0) > (user["bonus_claimed"] or 0)
-    await edit_card(
+    await _photo_card(
         callback,
+        TRACK_PHOTO_FILE_IDS.get(track_id, CATALOG_PHOTO_FILE_ID),
         track_card_text(track, free_available, owned),
         track_kb(
             track, free_available, owned, callback.from_user.id, bonus_available
