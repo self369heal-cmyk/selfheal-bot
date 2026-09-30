@@ -1,4 +1,6 @@
+import gzip
 import logging
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -30,8 +32,16 @@ async def cmd_backupdb(message: Message) -> None:
         await message.answer("Файл базы не найден")
         return
     stamp = datetime.now().strftime("%Y%m%d_%H%M")
-    await message.answer_document(
-        FSInputFile(db_path, filename=f"selfheal_{stamp}.db"),
-        caption="Резервная копия базы selfheal.db",
-    )
+    # сеть VPS→релей режет большие аплоады — шлём сжато (~1/6 размера)
+    with tempfile.NamedTemporaryFile(suffix=".gz", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        with gzip.GzipFile(fileobj=tmp, mode="wb") as gz:
+            gz.write(db_path.read_bytes())
+    try:
+        await message.answer_document(
+            FSInputFile(tmp_path, filename=f"selfheal_{stamp}.db.gz"),
+            caption="Резервная копия базы selfheal.db (gzip)",
+        )
+    finally:
+        tmp_path.unlink(missing_ok=True)
     logger.info("DB backup sent to admin %s", message.from_user.id)
