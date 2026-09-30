@@ -22,7 +22,7 @@ router = Router()
 TRACK_PRICE = 900
 
 # постер каталога КИТ — file_id боевого бота (assets/catalog-kit.png)
-CATALOG_PHOTO_FILE_ID = "AgACAgQAAxkDAAIHZGq9CX4zj5qiCwJIp3Dcw3_zq1I_AAJLD2sb5ansUZv6tLk21ce3AQADAgADdwADPQQ"
+CATALOG_PHOTO_FILE_ID = "AgACAgQAAxkDAAIHZ2q9DJimAzfHnjCI6g_IAgYVDJI7AAKLD2sbcqbtUW3RSyJGL8POAQADAgADdwADPQQ"
 
 # короткие названия кнопок-разделителей (неактивные) и треков — утверждены заказчиком
 SECTION_SHORT = {
