@@ -21,6 +21,9 @@ router = Router()
 
 TRACK_PRICE = 900
 
+# постер каталога КИТ — file_id боевого бота (assets/catalog-kit.png)
+CATALOG_PHOTO_FILE_ID = "AgACAgQAAxkDAAIHc2q9Dr31zuLfdj76rysaffgTOzlXAAKTD2sbQEftUYf4hHGg_jLjAQADAgADeQADPQQ"
+
 # короткие названия кнопок-разделителей (неактивные) и треков — утверждены заказчиком
 SECTION_SHORT = {
     "emotions": "😔 Эмоции и психика",
@@ -65,6 +68,26 @@ SECTIONS: dict[str, str] = {
     "energy": "☀️ Состояние, энергия, деньги и реализация",
     "body": "💪 Исцеление тела",
 }
+
+
+async def _catalog_to_message(message, text: str, kb: InlineKeyboardMarkup) -> None:
+    """Отрисовать каталог: сообщение с фото — меняем подпись,
+    текстовое — заменяем фото-сообщением (единый экран сохраняется)."""
+    if message.photo:
+        await message.edit_caption(caption=text, reply_markup=kb)
+    else:
+        await message.delete()
+        await message.answer_photo(
+            photo=CATALOG_PHOTO_FILE_ID, caption=text, reply_markup=kb
+        )
+
+
+async def edit_card(callback: CallbackQuery, text: str, kb=None) -> None:
+    """Править экран: фото-сообщение → caption, текстовое → edit_text."""
+    if callback.message.photo:
+        await callback.message.edit_caption(caption=text, reply_markup=kb)
+    else:
+        await callback.message.edit_text(text, reply_markup=kb)
 
 
 async def catalog_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
@@ -212,14 +235,14 @@ async def noop_button(callback: CallbackQuery) -> None:
 @router.callback_query(F.data == "catalog")
 async def show_catalog(callback: CallbackQuery) -> None:
     text, kb = await catalog_view(callback.from_user.id)
-    await callback.message.edit_text(text, reply_markup=kb)
+    await _catalog_to_message(callback.message, text, kb)
 
 
 @router.callback_query(F.data.startswith("sec:"))
 async def show_section(callback: CallbackQuery) -> None:
     # старые экраны с кнопками разделов — ведём в общий каталог
     text, kb = await catalog_view(callback.from_user.id)
-    await callback.message.edit_text(text, reply_markup=kb)
+    await _catalog_to_message(callback.message, text, kb)
 
 
 @router.callback_query(F.data.startswith("track:"))
@@ -236,9 +259,10 @@ async def show_track(callback: CallbackQuery) -> None:
     if user and not free_available:
         earned = await db.count_referrals(callback.from_user.id) // 3
         bonus_available = earned + (user["promo_bonus"] or 0) > (user["bonus_claimed"] or 0)
-    await callback.message.edit_text(
+    await edit_card(
+        callback,
         track_card_text(track, free_available, owned),
-        reply_markup=track_kb(
+        track_kb(
             track, free_available, owned, callback.from_user.id, bonus_available
         ),
     )
@@ -263,7 +287,8 @@ async def _deliver_free_track(callback: CallbackQuery, user, track) -> None:
     await db.add_user_track(callback.from_user.id, track_id)
     logger.info("User %s claimed free track %s", callback.from_user.id, track_id)
 
-    await callback.message.edit_text(
+    await edit_card(
+        callback,
         f"🎁 <b>{track['title']}</b>: ваш подарок!\n\n"
         "Трек придёт следующим сообщением. Желательно перед запуском трека "
         "<b>выбрать намерение и свой желаемый результат</b>. "
