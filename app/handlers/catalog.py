@@ -87,7 +87,9 @@ async def catalog_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
         for t in tracks:
             if t["section"] == sec:
                 mark = "✅ " if t["track_id"] in owned else ""
-                lines.append(f"{mark}{t['track_id']}. {t['title']}")
+                main, _, rest = t["title"].partition(" (")
+                rest = f" ({rest}" if rest else ""
+                lines.append(f"{mark}{t['track_id']}. <b>{main}</b>{rest}")
         lines.append("")
     text = "\n".join(lines).rstrip()
 
