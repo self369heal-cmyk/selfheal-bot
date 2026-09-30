@@ -102,63 +102,51 @@ async def purchases_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
 def _ptrack_kb(
     track,
     free_available: bool,
-    owned: bool,
     telegram_id: int,
     bonus_available: bool,
 ) -> InlineKeyboardMarkup:
-    """Кнопки карточки трека из «Мои покупок»: купленный — скачать,
-    остальные — те же варианты покупки, что в каталоге; назад — к покупкам."""
+    """Кнопки карточки НЕкупленного трека из «Мои покупок» — те же варианты
+    получения, что в каталоге; назад — к покупкам. Купленные выдаются сразу."""
     rows: list[list[InlineKeyboardButton]] = []
     tid = track["track_id"]
-    if owned:
+    if bonus_available:
         rows.append(
             [
                 InlineKeyboardButton(
-                    text="📥 Скачать ещё раз",
-                    callback_data=f"redl:{tid}",
+                    text="🎁 Забрать бонус-трек",
+                    callback_data=f"bonus:{tid}",
+                    style="success",
+                )
+            ]
+        )
+    if free_available:
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text="🎁 Забрать бесплатно",
+                    callback_data=f"free:{tid}",
                     style="success",
                 )
             ]
         )
     else:
-        if bonus_available:
-            rows.append(
-                [
-                    InlineKeyboardButton(
-                        text="🎁 Забрать бонус-трек",
-                        callback_data=f"bonus:{tid}",
-                        style="success",
-                    )
-                ]
-            )
-        if free_available:
-            rows.append(
-                [
-                    InlineKeyboardButton(
-                        text="🎁 Забрать бесплатно",
-                        callback_data=f"free:{tid}",
-                        style="success",
-                    )
-                ]
-            )
-        else:
-            rows.append(
-                [
-                    InlineKeyboardButton(
-                        text=f"💳 Купить за {TRACK_PRICE} ₽",
-                        url=pay_url(track, telegram_id),
-                        style="success",
-                    )
-                ]
-            )
-            rows.append(
-                [
-                    InlineKeyboardButton(
-                        text="🎁 Пригласить 3х друзей и получить бонусом",
-                        callback_data="referral",
-                    )
-                ]
-            )
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=f"💳 Купить за {TRACK_PRICE} ₽",
+                    url=pay_url(track, telegram_id),
+                    style="success",
+                )
+            ]
+        )
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text="🎁 Пригласить 3х друзей и получить бонусом",
+                    callback_data="referral",
+                )
+            ]
+        )
     rows.append(
         [
             InlineKeyboardButton(
@@ -188,6 +176,32 @@ async def show_purchased_track(callback: CallbackQuery) -> None:
     user = await db.get_user(callback.from_user.id)
     free_available = bool(user) and not user["got_free_track"]
     owned = await db.user_has_track(callback.from_user.id, track_id)
+    if owned:
+        # купленный трек — сразу выдача: обложка + аудио с описанием и реф-ссылкой
+        if not track["file_id"]:
+            await callback.answer(
+                "Файл этого трека ещё не загружен, скоро будет доступен 🙌",
+                show_alert=True,
+            )
+            return
+        caption = await track_caption(callback.bot, callback.from_user.id, track)
+        photo_id = TRACK_PHOTO_FILE_IDS.get(track_id, CATALOG_PHOTO_FILE_ID)
+        try:
+            await callback.message.answer_photo(photo=photo_id)
+            await callback.message.answer_audio(
+                track["file_id"], title=track["title"], caption=caption
+            )
+        except TelegramAPIError:
+            logger.exception(
+                "Delivery failed for user %s track %s",
+                callback.from_user.id,
+                track_id,
+            )
+            await callback.answer(
+                "Не удалось отправить файл. Напишите в поддержку",
+                show_alert=True,
+            )
+        return
     bonus_available = False
     if user and not free_available and not owned:
         earned = await db.count_referrals(callback.from_user.id) // 3
@@ -197,7 +211,7 @@ async def show_purchased_track(callback: CallbackQuery) -> None:
         TRACK_PHOTO_FILE_IDS.get(track_id, CATALOG_PHOTO_FILE_ID),
         track_card_text(track, free_available, owned),
         _ptrack_kb(
-            track, free_available, owned, callback.from_user.id, bonus_available
+            track, free_available, callback.from_user.id, bonus_available
         ),
     )
 
