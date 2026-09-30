@@ -174,7 +174,10 @@ async def _grant_bonus_track(callback: CallbackQuery, track_id: int) -> None:
     await db.add_user_track(callback.from_user.id, track_id)
     logger.info("User %s claimed bonus track %s", callback.from_user.id, track_id)
 
-    await callback.message.edit_text(
+    from app.handlers.catalog import edit_card  # локальный импорт — избегаем цикла
+
+    await edit_card(
+        callback,
         f"🎁 <b>{track['title']}</b>: ваш бонусный трек!\n\n"
         "Трек придёт следующим сообщением. Желательно перед запуском трека "
         "<b>выбрать намерение и свой желаемый результат</b>. "
