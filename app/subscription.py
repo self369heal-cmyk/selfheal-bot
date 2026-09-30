@@ -68,8 +68,10 @@ async def require_subscription(callback, track_id: int, kind: str) -> bool:
             show_alert=True,
         )
     else:
-        await callback.message.edit_text(
-            SUBSCRIBE_TEXT.format(channel=settings.channel_username),
-            reply_markup=subscribe_kb(track_id, kind),
-        )
+        text = SUBSCRIBE_TEXT.format(channel=settings.channel_username)
+        kb = subscribe_kb(track_id, kind)
+        if callback.message.photo:
+            await callback.message.edit_caption(caption=text, reply_markup=kb)
+        else:
+            await callback.message.edit_text(text, reply_markup=kb)
     return False

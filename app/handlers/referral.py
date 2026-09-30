@@ -148,7 +148,9 @@ async def referral_view(telegram_id: int, bot) -> tuple[str, InlineKeyboardMarku
 @router.callback_query(F.data == "referral")
 async def show_referral(callback: CallbackQuery) -> None:
     text, kb = await referral_view(callback.from_user.id, callback.bot)
-    await callback.message.edit_text(text, reply_markup=kb)
+    from app.handlers.catalog import edit_card  # локальный импорт — избегаем цикла
+
+    await edit_card(callback, text, kb)
 
 
 @router.callback_query(F.data == "copy_ref_link")
