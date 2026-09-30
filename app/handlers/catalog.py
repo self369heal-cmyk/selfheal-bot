@@ -119,7 +119,7 @@ async def catalog_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
     rows: list[list[InlineKeyboardButton]] = []
     for sec in SECTION_ORDER:
         rows.append(
-            [InlineKeyboardButton(text=SECTION_SHORT[sec], callback_data="noop")]
+            [InlineKeyboardButton(text=SECTION_SHORT[sec], callback_data="noop", style="primary")]
         )
         pair: list[InlineKeyboardButton] = []
         for t in tracks:
@@ -130,6 +130,7 @@ async def catalog_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
                 InlineKeyboardButton(
                     text=f"{mark}{t['track_id']}. {TRACK_SHORT.get(t['track_id'], t['title'])}",
                     callback_data=f"track:{t['track_id']}",
+                    style="success",
                 )
             )
             if len(pair) == 2:
