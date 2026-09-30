@@ -5,6 +5,7 @@ from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    InputMediaPhoto,
 )
 
 from urllib.parse import quote
@@ -23,6 +24,22 @@ TRACK_PRICE = 900
 
 # постер каталога КИТ — file_id боевого бота (assets/catalog-kit.png)
 CATALOG_PHOTO_FILE_ID = "AgACAgQAAxkDAAIHc2q9Dr31zuLfdj76rysaffgTOzlXAAKTD2sbQEftUYf4hHGg_jLjAQADAgADeQADPQQ"
+
+# индивидуальные картинки треков — file_id (assets/tracks/track-NN.png)
+TRACK_PHOTO_FILE_IDS = {
+    1: "AgACAgQAAxkDAAIHzWq9F7dnGfGSn2ahXxjDIe863Ma3AAJID2sbr2zsUZJyz-i16VM7AQADAgADeQADPQQ",
+    2: "AgACAgQAAxkDAAIHzmq9F7iimWunDwqwGddoIob1tr48AAIjD2sbJRHtUXPY8L6H1NQGAQADAgADeQADPQQ",
+    3: "AgACAgQAAxkDAAIHz2q9F7lbsF4eCfPJpwTWBhWJbXX3AAKfD2sbMs_sUeVnRz8pLlWBAQADAgADeQADPQQ",
+    4: "AgACAgQAAxkDAAIH0Gq9F7laKcmVSWAWgymoNpMZ2a7NAAJmD2sbg_rtUew9kSTpHDdNAQADAgADeQADPQQ",
+    5: "AgACAgQAAxkDAAIH3Gq9Gv1NU2AZabpDjptlv5r53BM7AAJ3D2sb6-PsUYO1vRug684AAQEAAwIAA3kAAz0E",
+    6: "AgACAgQAAxkDAAIH3Wq9Gv6Etw1MNZQFHURTvOJegr2fAAJnD2sbWNrsUWdd_Av_gDXYAQADAgADeQADPQQ",
+    7: "AgACAgQAAxkDAAIH3mq9Gv83wnda-N3xaPm0kQtMHin9AAJYD2sbjg3tUXQBN-XWRk1BAQADAgADeQADPQQ",
+    8: "AgACAgQAAxkDAAIH32q9GwABYtCgXx1wH7VxWzQ-9sjfsgACVA9rG7lJ7FFzI0WTXrZlBAEAAwIAA3kAAz0E",
+    9: "AgACAgQAAxkDAAIH5Wq9HTJp2L_v7x2p3Yw4gVrkTh-mAAJOD2sbeDTsUQq7ERhVxcieAQADAgADbQADPQQ",
+    10: "AgACAgQAAxkDAAIH5mq9HTMiHdfKB9wsS3BiIhHMwCo6AAJcD2sbYmH1UatyCuxH_NTgAQADAgADbQADPQQ",
+    11: "AgACAgQAAxkDAAIH52q9HTPItFQhb7_txi-_BntFTPRwAAJED2sbkcntUY1plwEFySYfAQADAgADbQADPQQ",
+    12: "AgACAgQAAxkDAAIH6Gq9HTQtt-hAts94sawV4_cY1k31AAItD2sbY9n1UbzAHmGLehfVAQADAgADbQADPQQ",
+}
 
 # короткие названия кнопок-разделителей (неактивные) и треков — утверждены заказчиком
 SECTION_SHORT = {
@@ -71,15 +88,33 @@ SECTIONS: dict[str, str] = {
 
 
 async def _catalog_to_message(message, text: str, kb: InlineKeyboardMarkup) -> None:
-    """Отрисовать каталог: сообщение с фото — меняем подпись,
-    текстовое — заменяем фото-сообщением (единый экран сохраняется)."""
+    """Отрисовать каталог: фото-сообщение — подменяем медиа на постер
+    (карточки треков меняют картинку), текстовое — удаляем и шлём фото."""
     if message.photo:
-        await message.edit_caption(caption=text, reply_markup=kb)
+        await message.edit_media(
+            media=InputMediaPhoto(media=CATALOG_PHOTO_FILE_ID, caption=text),
+            reply_markup=kb,
+        )
     else:
-        await message.delete()
+        # сначала новое фото, потом удаление старого — при сбое экран с кнопками останется
         await message.answer_photo(
             photo=CATALOG_PHOTO_FILE_ID, caption=text, reply_markup=kb
         )
+        await message.delete()
+
+
+async def _photo_card(callback: CallbackQuery, photo_id: str, text: str, kb) -> None:
+    """Фото-карточка: на фото-сообщении — заменить медиа, на текстовом — прислать фото."""
+    if callback.message.photo:
+        await callback.message.edit_media(
+            media=InputMediaPhoto(media=photo_id, caption=text),
+            reply_markup=kb,
+        )
+    else:
+        await callback.message.answer_photo(
+            photo=photo_id, caption=text, reply_markup=kb
+        )
+        await callback.message.delete()
 
 
 async def edit_card(callback: CallbackQuery, text: str, kb=None) -> None:
@@ -119,7 +154,7 @@ async def catalog_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
     rows: list[list[InlineKeyboardButton]] = []
     for sec in SECTION_ORDER:
         rows.append(
-            [InlineKeyboardButton(text=SECTION_SHORT[sec], callback_data="noop")]
+            [InlineKeyboardButton(text=SECTION_SHORT[sec], callback_data="noop", style="primary")]
         )
         pair: list[InlineKeyboardButton] = []
         for t in tracks:
@@ -130,6 +165,7 @@ async def catalog_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
                 InlineKeyboardButton(
                     text=f"{mark}{t['track_id']}. {TRACK_SHORT.get(t['track_id'], t['title'])}",
                     callback_data=f"track:{t['track_id']}",
+                    style="success",
                 )
             )
             if len(pair) == 2:
@@ -259,8 +295,9 @@ async def show_track(callback: CallbackQuery) -> None:
     if user and not free_available:
         earned = await db.count_referrals(callback.from_user.id) // 3
         bonus_available = earned + (user["promo_bonus"] or 0) > (user["bonus_claimed"] or 0)
-    await edit_card(
+    await _photo_card(
         callback,
+        TRACK_PHOTO_FILE_IDS.get(track_id, CATALOG_PHOTO_FILE_ID),
         track_card_text(track, free_available, owned),
         track_kb(
             track, free_available, owned, callback.from_user.id, bonus_available
