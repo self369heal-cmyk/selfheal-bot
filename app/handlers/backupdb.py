@@ -1,5 +1,7 @@
+import asyncio
 import gzip
 import logging
+import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +24,12 @@ def _is_admin(message: Message) -> bool:
     )
 
 
+def _gzip_db(src: Path, dst: Path) -> None:
+    with open(dst, "wb") as out, gzip.GzipFile(fileobj=out, mode="wb") as gz:
+        with open(src, "rb") as db_file:
+            shutil.copyfileobj(db_file, gz)
+
+
 @router.message(Command("backupdb"))
 async def cmd_backupdb(message: Message) -> None:
     """Присылает админу актуальный файл SQLite-базы документом."""
@@ -33,11 +41,9 @@ async def cmd_backupdb(message: Message) -> None:
         return
     stamp = datetime.now().strftime("%Y%m%d_%H%M")
     # сеть VPS→релей режет большие аплоады — шлём сжато (~1/6 размера)
-    with tempfile.NamedTemporaryFile(suffix=".gz", delete=False) as tmp:
-        tmp_path = Path(tmp.name)
-        with gzip.GzipFile(fileobj=tmp, mode="wb") as gz:
-            gz.write(db_path.read_bytes())
+    tmp_path = Path(tempfile.NamedTemporaryFile(suffix=".gz", delete=False).name)
     try:
+        await asyncio.to_thread(_gzip_db, db_path, tmp_path)
         await message.answer_document(
             FSInputFile(tmp_path, filename=f"selfheal_{stamp}.db.gz"),
             caption="Резервная копия базы selfheal.db (gzip)",
