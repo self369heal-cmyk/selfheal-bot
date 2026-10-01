@@ -196,6 +196,10 @@ async def init_db() -> None:
             await db.execute(
                 "ALTER TABLE users ADD COLUMN promo_bonus INTEGER NOT NULL DEFAULT 0"
             )
+        if "promo_awaiting" not in user_columns:
+            await db.execute(
+                "ALTER TABLE users ADD COLUMN promo_awaiting INTEGER NOT NULL DEFAULT 0"
+            )
         if "duration_min" in columns:
             await db.execute("ALTER TABLE tracks DROP COLUMN duration_min")
         cursor = await db.execute("PRAGMA table_info(referrals)")
@@ -752,8 +756,30 @@ async def increment_bonus_claimed(telegram_id: int) -> None:
         await db.commit()
 
 
+# кириллические буквы → латинские аналоги по начертанию/произношению
+_CYR_TO_LAT = str.maketrans("АВЕКМНОРСТУХИ", "ABEKMHOPCTYXI")
+
+
 def _norm_promo(code: str) -> str:
-    return code.strip().upper()
+    return code.strip().upper().translate(_CYR_TO_LAT)
+
+
+async def set_promo_awaiting(user_id: int, awaiting: bool) -> None:
+    async with _connect() as db:
+        await db.execute(
+            "UPDATE users SET promo_awaiting = ? WHERE telegram_id = ?",
+            (int(awaiting), user_id),
+        )
+        await db.commit()
+
+
+async def is_promo_awaiting(user_id: int) -> bool:
+    async with _connect() as db:
+        cursor = await db.execute(
+            "SELECT promo_awaiting FROM users WHERE telegram_id = ?", (user_id,)
+        )
+        row = await cursor.fetchone()
+        return bool(row and row[0])
 
 
 async def add_promo_code(code: str, max_uses: int | None = None) -> bool:
@@ -788,26 +814,26 @@ async def list_promo_codes() -> list[aiosqlite.Row]:
         return await cursor.fetchall()
 
 
-async def use_promo(user_id: int, code: str) -> bool:
+async def use_promo(user_id: int, code: str) -> str:
     """Погасить промокод: +1 к promo_bonus пользователя.
-    False — кода нет, лимит исчерпан или пользователь уже вводил его."""
+    Возвращает 'ok', 'missing', 'exhausted' или 'already_used'."""
     normalized = _norm_promo(code)
     async with _connect() as db:
         cursor = await db.execute(
-            """
-            SELECT 1 FROM promo_codes
-            WHERE code = ? AND (max_uses IS NULL OR used_count < max_uses)
-            """,
+            "SELECT used_count, max_uses FROM promo_codes WHERE code = ?",
             (normalized,),
         )
-        if await cursor.fetchone() is None:
-            return False
+        row = await cursor.fetchone()
+        if row is None:
+            return "missing"
         cursor = await db.execute(
             "SELECT 1 FROM promo_uses WHERE user_id = ? AND code = ?",
             (user_id, normalized),
         )
         if await cursor.fetchone() is not None:
-            return False
+            return "already_used"
+        if row[1] is not None and row[0] >= row[1]:
+            return "exhausted"
         await db.execute(
             "INSERT INTO promo_uses (user_id, code, used_at) VALUES (?, ?, ?)",
             (user_id, normalized, datetime.now(timezone.utc).isoformat()),
@@ -821,4 +847,4 @@ async def use_promo(user_id: int, code: str) -> bool:
             (user_id,),
         )
         await db.commit()
-        return True
+        return "ok"
