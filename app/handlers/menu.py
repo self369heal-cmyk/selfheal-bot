@@ -26,6 +26,11 @@ SECTION_SCREENS: dict[str, tuple[str, object]] = {
     "support": (texts.SUPPORT, ""),
 }
 
+# скриншот кнопки повтора в плеере — иллюстрация к «Как слушать КИТ»
+HOWTO_PHOTO_FILE_ID = (
+    "AgACAgIAAxkDAAIJtGq-V7uTmG7CujVpiesRZSAm5Q-7AAKBIGsbn1X5SdP6_9KIcvzfAQADAgADeAADPQQ"
+)
+
 
 @router.message(Command("menu"))
 async def cmd_menu(message: Message) -> None:
@@ -57,6 +62,20 @@ async def show_section(callback: CallbackQuery) -> None:
         kb = back_to_menu_kb()
     else:
         kb = contact_vlademir_kb(prefill or None)
+    if callback.data == "howto":
+        # текст длиннее лимита подписи фото (1024) — шлём картинку
+        # и текст отдельными сообщениями, старый экран удаляем
+        await callback.message.answer_photo(HOWTO_PHOTO_FILE_ID)
+        await callback.message.answer(text, reply_markup=kb)
+        try:
+            await callback.message.delete()
+        except TelegramAPIError:
+            logger.warning("show_section: failed to delete menu screen")
+            try:
+                await callback.message.edit_reply_markup()
+            except TelegramAPIError:
+                pass
+        return
     await callback.message.edit_text(text, reply_markup=kb)
 
 
