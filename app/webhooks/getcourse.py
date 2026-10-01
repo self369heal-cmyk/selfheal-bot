@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from aiogram.exceptions import TelegramAPIError
@@ -10,6 +10,8 @@ from app import db
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+MSK_TZ = timezone(timedelta(hours=3))
 
 router = APIRouter()
 
@@ -127,7 +129,7 @@ async def _notify_admin_order(bot, *, header: str, order: dict) -> None:
             f"📱 {order.get('customer_phone') or '—'}",
             f"🆔 telegram_id: {tg_str}",
             f"💬 {tg_link}",
-            f"🕐 {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M UTC')}",
+            f"🕐 {datetime.now(MSK_TZ).strftime('%d.%m.%Y %H:%M МСК')}",
         ]
         extra = order.get("extra_line")
         if extra:
