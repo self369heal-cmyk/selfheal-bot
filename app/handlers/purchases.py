@@ -22,7 +22,7 @@ from app.handlers.catalog import (
     pay_url,
     track_card_text,
 )
-from app.handlers.referral import PURCHASES_BUTTON_TEXT, track_caption
+from app.handlers.referral import track_caption
 from app.keyboards import BACK_LABEL, CB_MENU
 from app.meditations import get_meditation
 
@@ -97,6 +97,20 @@ async def purchases_view(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
         )
     rows.append([InlineKeyboardButton(text=BACK_LABEL, callback_data=CB_MENU)])
     return text, InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _back_to_purchases_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Назад к покупкам",
+                    callback_data="purchases",
+                    style="danger",
+                )
+            ]
+        ]
+    )
 
 
 def _ptrack_kb(
@@ -187,11 +201,15 @@ async def show_purchased_track(callback: CallbackQuery) -> None:
         caption = await track_caption(callback.bot, callback.from_user.id, track)
         photo_id = TRACK_PHOTO_FILE_IDS.get(track_id, CATALOG_PHOTO_FILE_ID)
         # единым сообщением нельзя: Telegram не принимает thumbnail по file_id,
-        # а аплоад байтов через Worker-релей недоступен — шлём фото + аудио
+        # а аплоад байтов через Worker-релей недоступен — шлём фото + аудио.
+        # Кнопка «назад» — на самом аудио, без отдельного меню внизу
         try:
             await callback.message.answer_photo(photo=photo_id)
             await callback.message.answer_audio(
-                track["file_id"], title=track["title"], caption=caption
+                track["file_id"],
+                title=track["title"],
+                caption=caption,
+                reply_markup=_back_to_purchases_kb(),
             )
         except TelegramAPIError:
             logger.exception(
@@ -204,21 +222,6 @@ async def show_purchased_track(callback: CallbackQuery) -> None:
                 show_alert=True,
             )
             return
-        await callback.message.answer(
-            "Все ваши треки — в разделе «Мои покупки».",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="⬅️ Назад к покупкам",
-                            callback_data="purchases",
-                            style="danger",
-                        )
-                    ]
-                ]
-            ),
-        )
-        return
     bonus_available = False
     if user and not free_available and not owned:
         earned = await db.count_referrals(callback.from_user.id) // 3
@@ -249,7 +252,10 @@ async def redeliver_track(callback: CallbackQuery) -> None:
     caption = await track_caption(callback.bot, callback.from_user.id, track)
     try:
         await callback.message.answer_audio(
-            track["file_id"], title=track["title"], caption=caption,
+            track["file_id"],
+            title=track["title"],
+            caption=caption,
+            reply_markup=_back_to_purchases_kb(),
         )
     except TelegramAPIError:
         logger.exception(
@@ -259,7 +265,9 @@ async def redeliver_track(callback: CallbackQuery) -> None:
         )
         try:
             await callback.message.answer_document(
-                track["file_id"], caption=caption,
+                track["file_id"],
+                caption=caption,
+                reply_markup=_back_to_purchases_kb(),
             )
         except TelegramAPIError:
             await callback.answer(
@@ -267,11 +275,3 @@ async def redeliver_track(callback: CallbackQuery) -> None:
                 show_alert=True,
             )
             return
-    await callback.message.answer(
-        "Все ваши треки — в разделе «Мои покупки».",
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text=PURCHASES_BUTTON_TEXT, callback_data="purchases")]
-            ]
-        ),
-    )
