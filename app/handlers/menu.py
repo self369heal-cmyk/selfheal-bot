@@ -64,9 +64,21 @@ async def show_section(callback: CallbackQuery) -> None:
         kb = contact_vlademir_kb(prefill or None)
     if callback.data == "howto":
         # текст длиннее лимита подписи фото (1024) — шлём картинку
-        # и текст отдельными сообщениями, старый экран удаляем
-        await callback.message.answer_photo(HOWTO_PHOTO_FILE_ID)
-        await callback.message.answer(text, reply_markup=kb)
+        # и текст отдельными сообщениями, старый экран удаляем.
+        # Каждое сообщение — со своим ретраем: повтор всего хендлера
+        # не плодит дубли, а отказ фото не блокирует текст
+        try:
+            await retry_transient(
+                lambda: callback.message.answer_photo(HOWTO_PHOTO_FILE_ID)
+            )
+        except (*TRANSIENT_ERRORS, TelegramAPIError):
+            logger.exception("show_section: failed to send howto photo")
+        try:
+            await retry_transient(
+                lambda: callback.message.answer(text, reply_markup=kb)
+            )
+        except TRANSIENT_ERRORS:
+            logger.exception("show_section: failed to send howto text")
         try:
             await callback.message.delete()
         except TelegramAPIError:
