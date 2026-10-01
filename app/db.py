@@ -225,6 +225,35 @@ async def init_db() -> None:
         await db.execute(
             "UPDATE orders SET paid_at = created_at WHERE paid_at IS NULL"
         )
+        # коды, созданные до нормализации кириллицы: приводим хранимое значение
+        # к тому же виду, что и ввод пользователя, иначе такой код «исчезает»
+        cursor = await db.execute("SELECT code FROM promo_codes")
+        for (stored,) in await cursor.fetchall():
+            norm = _norm_promo(stored)
+            if not norm or norm == stored:
+                continue
+            await db.execute(
+                "UPDATE OR IGNORE promo_codes SET code = ? WHERE code = ?",
+                (norm, stored),
+            )
+            # при коллизии (нормализованный код уже есть) — сливаем счётчик
+            await db.execute(
+                "UPDATE promo_codes SET used_count = used_count + "
+                "(SELECT used_count FROM promo_codes WHERE code = ?) "
+                "WHERE code = ? AND EXISTS "
+                "(SELECT 1 FROM promo_codes WHERE code = ?)",
+                (stored, norm, stored),
+            )
+            await db.execute(
+                "DELETE FROM promo_codes WHERE code = ?", (stored,)
+            )
+            await db.execute(
+                "UPDATE OR IGNORE promo_uses SET code = ? WHERE code = ?",
+                (norm, stored),
+            )
+            await db.execute(
+                "DELETE FROM promo_uses WHERE code = ?", (stored,)
+            )
         await db.executemany(
             """
             INSERT INTO tracks (track_id, title, section, description, file_id)
@@ -771,6 +800,19 @@ async def set_promo_awaiting(user_id: int, awaiting: bool) -> None:
             (int(awaiting), user_id),
         )
         await db.commit()
+
+
+async def claim_promo_input(user_id: int) -> bool:
+    """Атомарно снять флаг ожидания кода: True — только у первого из
+    одновременно пришедших сообщений, остальные не доходят до погашения."""
+    async with _connect() as db:
+        cursor = await db.execute(
+            "UPDATE users SET promo_awaiting = 0 "
+            "WHERE telegram_id = ? AND promo_awaiting = 1",
+            (user_id,),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
 
 
 async def is_promo_awaiting(user_id: int) -> bool:

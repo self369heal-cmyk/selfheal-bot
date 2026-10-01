@@ -66,7 +66,9 @@ async def _awaiting_code(m: Message) -> bool:
 
 @router.message(F.text, _awaiting_code)
 async def promo_code_input(message: Message) -> None:
-    await db.set_promo_awaiting(message.from_user.id, False)
+    # атомарное поглощение: из двух сообщений подряд код принимает только первое
+    if not await db.claim_promo_input(message.from_user.id):
+        return
     status = await db.use_promo(message.from_user.id, message.text or "")
     if status == "ok":
         logger.info("User %s used promo code", message.from_user.id)
